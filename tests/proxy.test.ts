@@ -28,17 +28,31 @@ function req(path: string, init: RequestInit = {}, opts: { origin?: string } = {
 }
 
 describe('createCaptchaProxy', () => {
-  it('exports GET, POST, OPTIONS handlers', () => {
+  it('is a universal function with GET, POST, OPTIONS handlers', () => {
     const h = createCaptchaProxy({ mountPath: '/api/captcha' })
+    expect(typeof h).toBe('function')
     expect(typeof h.GET).toBe('function')
     expect(typeof h.POST).toBe('function')
     expect(typeof h.OPTIONS).toBe('function')
   })
 
+  it('acts as a universal handler based on request method', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }))
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
+    
+    // Test direct call for GET
+    await h(req('/api/captcha/calibration', { method: 'GET' }, { origin: 'https://app.example.com' }))
+    expect(fetchMock).toHaveBeenCalledWith(`${ENDPOINT}/calibration`, expect.objectContaining({ method: 'GET' }))
+    
+    // Test direct call for POST
+    await h(req('/api/captcha/challenge/issue', { method: 'POST' }, { origin: 'https://app.example.com' }))
+    expect(fetchMock).toHaveBeenCalledWith(`${ENDPOINT}/challenge/issue`, expect.objectContaining({ method: 'POST' }))
+  })
+
   it('OPTIONS returns 204 with CORS headers (wildcard echos origin)', async () => {
     const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     const res = await h.OPTIONS(
-      req('/api/captcha/calibration', {}, { origin: 'https://app.example.com' }),
+      req('/api/captcha/calibration', { method: 'OPTIONS' }, { origin: 'https://app.example.com' }),
     )
     expect(res.status).toBe(204)
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://app.example.com')
@@ -50,7 +64,7 @@ describe('createCaptchaProxy', () => {
 
   it('OPTIONS returns null when no origin header and allowedOrigins is *', async () => {
     const h = createCaptchaProxy({ mountPath: '/api/captcha' })
-    const res = await h.OPTIONS(req('/api/captcha/calibration'))
+    const res = await h.OPTIONS(req('/api/captcha/calibration', { method: 'OPTIONS' }))
     expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
   })
 
@@ -60,7 +74,7 @@ describe('createCaptchaProxy', () => {
       allowedOrigins: ['https://app.example.com', 'https://other.com'],
     })
     const res = await h.OPTIONS(
-      req('/api/captcha/calibration', {}, { origin: 'https://app.example.com' }),
+      req('/api/captcha/calibration', { method: 'OPTIONS' }, { origin: 'https://app.example.com' }),
     )
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://app.example.com')
   })
@@ -71,7 +85,7 @@ describe('createCaptchaProxy', () => {
       allowedOrigins: ['https://app.example.com'],
     })
     const res = await h.OPTIONS(
-      req('/api/captcha/calibration', {}, { origin: 'https://evil.example.com' }),
+      req('/api/captcha/calibration', { method: 'OPTIONS' }, { origin: 'https://evil.example.com' }),
     )
     expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
   })

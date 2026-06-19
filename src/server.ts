@@ -13,6 +13,13 @@
  *   // app/api/captcha/[...path]/route.ts
  *   import { createCaptchaProxy } from '@nexwinds/captcha/server'
  *   export const { GET, POST, OPTIONS } = createCaptchaProxy()
+ *
+ *   // OR (Recommended for Next.js 16/Turbopack)
+ *   const proxy = createCaptchaProxy()
+ *   export const { GET, POST, OPTIONS } = proxy
+ *   // OR even simpler:
+ *   export const POST = proxy
+ *   export const GET = proxy
  */
 
 export {

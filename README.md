@@ -31,25 +31,26 @@ npm install @nexwinds/captcha
 
 ## Setup
 
-### Proxy (Self-Hosting / CORS-free)
+### 1. The Proxy (Required)
 
-To avoid CORS issues and hide your SaaS usage from client-side network inspectors, you can mount a proxy in your Next.js App Router.
+To avoid CORS issues and keep user data on your origin, you MUST mount a proxy. In Next.js App Router:
 
 ```ts
 // app/api/captcha/[...path]/route.ts
 import { createCaptchaProxy } from '@nexwinds/captcha/server'
 
-const proxy = createCaptchaProxy({
+export const { GET, POST, OPTIONS } = createCaptchaProxy({
   allowedOrigins: ['https://yourdomain.com'], // or '*'
   debug: process.env.NODE_ENV === 'development',
 })
+```
 
-// IMPORTANT: Do NOT destructure the proxy object in the export.
-// Some bundlers (like Turbopack) may fail to map the POST method correctly.
-// Use explicit async function wrappers as shown below.
-export async function GET(req: Request) { return proxy.GET(req) }
-export async function POST(req: Request) { return proxy.POST(req) }
-export async function OPTIONS(req: Request) { return proxy.OPTIONS(req) }
+*Note: If you encounter 405 errors in Next.js 16/Turbopack, use explicit exports:*
+```ts
+const proxy = createCaptchaProxy()
+export const GET = proxy
+export const POST = proxy
+export const OPTIONS = proxy
 ```
 
 ### Troubleshooting Proxy Errors
@@ -119,22 +120,6 @@ export async function POST(req: Request) {
 }
 ```
 
-If you got a 405 on `POST /api/captcha/challenge/issue`, the route is
-matching but the POST handler isn't being exported. Restart the dev
-server after creating the file, or compare your file against the
-template above.
-
-### Manual Configuration
-
-If you'd rather not use `siteKey` per-widget, set it once at the
-provider level:
-
-```tsx
-<CaptchaProvider siteKey={...}>
-  <Captcha onSuccess={...} />
-</CaptchaProvider>
-```
-
 #### Locking the proxy to your origins (production)
 
 The default `allowedOrigins: '*'` is convenient for development. It
@@ -148,9 +133,9 @@ import { createCaptchaProxy } from '@nexwinds/captcha/server'
 const proxy = createCaptchaProxy({
   allowedOrigins: ['https://your-app.com', 'https://www.your-app.com'],
 })
-export async function GET(req: Request) { return proxy.GET(req) }
-export async function POST(req: Request) { return proxy.POST(req) }
-export async function OPTIONS(req: Request) { return proxy.OPTIONS(req) }
+export const POST = proxy
+export const GET = proxy
+export const OPTIONS = proxy
 ```
 
 Origins outside the list get `403`-equivalent preflight responses (no

@@ -55,6 +55,7 @@ export interface CaptchaProxyOptions {
 }
 
 export interface CaptchaProxyHandlers {
+  (request: Request): Promise<Response>
   GET: (request: Request) => Promise<Response>
   POST: (request: Request) => Promise<Response>
   OPTIONS: (request: Request) => Promise<Response>
@@ -135,8 +136,9 @@ function stripMount(pathname: string, mount: string): string {
 }
 
 /**
- * Build a set of Route Handlers. Returns the standard Web Fetch triples
- * (`GET`, `POST`, `OPTIONS`) that Next.js, Workers, etc. consume directly.
+ * Build a set of Route Handlers. Returns a single universal function
+ * that handles all methods (GET, POST, OPTIONS) and can be exported
+ * directly in Next.js or wrapped.
  */
 export function createCaptchaProxy(
   options: CaptchaProxyOptions = {},
@@ -151,12 +153,21 @@ export function createCaptchaProxy(
 
   async function handle(
     request: Request,
-    method: string,
   ): Promise<Response> {
+    const method = request.method.toUpperCase()
     if (options.debug) {
-      console.log(`[nexwinds/proxy] entering handle: ${method} ${request.url}`)
+      console.log(`[nexwinds/proxy] handling ${method} ${request.url}`)
     }
-    
+
+    if (method === 'OPTIONS') {
+      const origin = readRequestOrigin(request)
+      return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) })
+    }
+
+    if (method !== 'GET' && method !== 'POST') {
+      return new Response('Method Not Allowed', { status: 405 })
+    }
+
     // Safety check for body reading on POST
     let bodyText: string | undefined = undefined;
     if (method === 'POST') {
@@ -175,7 +186,7 @@ export function createCaptchaProxy(
     const target = joinUrl(endpoint, tail, incomingUrl.search)
 
     if (options.debug) {
-      console.log(`[nexwinds/proxy] ${method} ${incomingUrl.pathname} -> ${target}`)
+      console.log(`[nexwinds/proxy] forwarding ${method} -> ${target}`)
     }
 
     const headers = new Headers()
@@ -257,28 +268,11 @@ export function createCaptchaProxy(
     return out
   }
 
-  async function GET(request: Request): Promise<Response> {
-    if (options.debug) console.log(`[nexwinds/proxy] GET invoked`)
-    return handle(request, 'GET')
-  }
+  // Attach named handlers for backward compatibility and explicit exports
+  const proxy = handle as CaptchaProxyHandlers
+  proxy.GET = (req) => handle(req)
+  proxy.POST = (req) => handle(req)
+  proxy.OPTIONS = (req) => handle(req)
 
-  async function POST(request: Request): Promise<Response> {
-    if (options.debug) console.log(`[nexwinds/proxy] POST invoked for ${request.url}`)
-    return handle(request, 'POST').catch(e => {
-      console.error(`[nexwinds/proxy] Uncaught error in POST handler:`, e)
-      return new Response(JSON.stringify({ error: String(e) }), { status: 500 })
-    })
-  }
-
-  async function OPTIONS(request: Request): Promise<Response> {
-    if (options.debug) console.log(`[nexwinds/proxy] OPTIONS invoked`)
-    const origin = readRequestOrigin(request)
-    return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) })
-  }
-
-  return {
-    GET,
-    POST,
-    OPTIONS,
-  }
+  return proxy
 }
