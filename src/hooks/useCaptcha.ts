@@ -8,7 +8,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useCaptchaContext } from '../components/CaptchaProvider.js'
 import {
   getCalibration,
   issueChallenge,
@@ -26,7 +25,6 @@ import {
 } from '../lib/constants.js'
 import type {
   Calibration,
-  CaptchaContextValue,
   ChallengeIssueResponse,
   VerifyOutcome,
 } from '../types.js'
@@ -43,7 +41,6 @@ export type CaptchaState =
 
 export interface UseCaptchaOptions {
   publishableKey: string
-  endpoint?: string
   fingerprintHash: string
   /** Returns a fresh signals snapshot, called at verify time. */
   getSignals: () => import('../types.js').SignalsV1
@@ -65,19 +62,18 @@ export interface UseCaptchaResult {
 let calibrationCache: { value: Calibration; fetchedAt: number } | null = null
 const CALIBRATION_TTL_MS = 24 * 60 * 60 * 1000
 
-async function fetchCalibration(endpoint: string): Promise<Calibration> {
+async function fetchCalibration(): Promise<Calibration> {
   const now = Date.now()
   if (calibrationCache && now - calibrationCache.fetchedAt < CALIBRATION_TTL_MS) {
     return calibrationCache.value
   }
-  const cal = await getCalibration(endpoint, { timeoutMs: HTTP_TIMEOUT_MS })
+  const cal = await getCalibration(DEFAULT_ENDPOINT, { timeoutMs: HTTP_TIMEOUT_MS })
   calibrationCache = { value: cal, fetchedAt: now }
   return cal
 }
 
 export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
-  const ctx = useCaptchaContext()
-  const endpoint = opts.endpoint ?? ctx?.endpoint ?? DEFAULT_ENDPOINT
+  const endpoint = DEFAULT_ENDPOINT
   const [state, setState] = useState<CaptchaState>('idle')
   const [calibration, setCalibration] = useState<Calibration | null>(null)
   const [lastError, setLastError] = useState<string | null>(null)
@@ -90,7 +86,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
   useEffect(() => {
     if (calibration) return
     let cancelled = false
-    fetchCalibration(endpoint)
+    fetchCalibration()
       .then((c) => {
         if (cancelled) return
         setCalibration(c)
@@ -104,7 +100,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
     return () => {
       cancelled = true
     }
-  }, [endpoint, calibration])
+  }, [calibration])
 
   const start = useCallback(async () => {
     if (state !== 'idle' && state !== 'blocked' && state !== 'error' && state !== 'success' && state !== 'bypass') {
@@ -182,7 +178,6 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
     }
   }, [
     state,
-    endpoint,
     opts.publishableKey,
     opts.fingerprintHash,
     opts.getSignals,
@@ -242,5 +237,3 @@ function httpStatusToReason(s: number): 'rate_limited' | 'policy' | 'expired' | 
   if (s === 403) return 'policy'
   return 'invalid'
 }
-
-export type { CaptchaContextValue }

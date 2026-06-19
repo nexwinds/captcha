@@ -29,7 +29,6 @@ const STYLE: CSSProperties = { position: 'relative' }
 
 export function Captcha(props: CaptchaProps) {
   const ctx = useCaptchaContext()
-  const endpoint = props.endpoint ?? ctx?.endpoint ?? DEFAULT_ENDPOINT
   const { hash: fingerprintHash, ready: fingerprintReady } = useFingerprint()
   const signals = useBehavioralSignals({ active: true })
   const honeypot = useHoneypot()
@@ -42,7 +41,6 @@ export function Captcha(props: CaptchaProps) {
 
   const captcha = useCaptcha({
     publishableKey: props.publishableKey,
-    endpoint,
     fingerprintHash,
     getSignals: signals.getSignals,
     onVerify: useCallback((o: VerifyOutcome) => onVerifyRef.current(o), []),

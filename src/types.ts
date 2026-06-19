@@ -176,7 +176,6 @@ export type Locale = 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar'
 
 export interface CaptchaContextValue {
   publishableKey: string
-  endpoint: string
   locale: Locale
   theme: 'auto' | 'light' | 'dark'
 }
@@ -184,8 +183,6 @@ export interface CaptchaContextValue {
 export interface CaptchaProps {
   /** pk_live_<random_hex> from the captcha dashboard. */
   publishableKey: string
-  /** SaaS endpoint. Defaults to https://nexcookie.com/api/v1. */
-  endpoint?: string
   /** Locale for UI strings. Defaults to navigator.language or 'en'. */
   locale?: Locale
   /** "auto" follows the user's prefers-color-scheme. */
@@ -206,8 +203,6 @@ export interface CaptchaProps {
 export interface CreateServerClientOptions {
   /** sk_live_<random_hex> from the captcha dashboard. */
   secretKey: string
-  /** SaaS endpoint. Defaults to https://nexcookie.com/api/v1. */
-  endpoint?: string
   /** Custom fetch (for tests or self-hosted runtimes). */
   fetch?: typeof fetch
 }

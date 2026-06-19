@@ -96,7 +96,6 @@ import { headers } from 'next/headers'
 
 const nxw = createServerClient({
   secretKey: process.env.NEXWINDS_SECRET_KEY!,
-  endpoint: process.env.NEXWINDS_ENDPOINT, // optional override
 })
 
 export async function POST(req: Request) {
@@ -139,9 +138,7 @@ export const OPTIONS = proxy.OPTIONS
 
 That's the entire integration. The widget talks to `/api/captcha/*`
 (same-origin, no CORS, no CSP tweak for `nexcookie.com`); the proxy
-forwards to the SaaS server-to-server. With `endpoint` left at the
-default, the widget needs **no `endpoint` prop at all** — the proxy
-becomes the SaaS endpoint from the widget's perspective.
+forwards to the SaaS server-to-server.
 
 If you got a 405 on `POST /api/captcha/challenge/issue`, the route is
 matching but the POST handler isn't being exported. Restart the dev
@@ -149,29 +146,30 @@ server after creating the file, or compare your file against the
 template above.
 
 ```tsx
-<Captcha endpoint="/api/captcha" publishableKey={...} onVerify={...} />
+<Captcha publishableKey={...} onVerify={...} />
 ```
 
-Or, if you'd rather not set `endpoint` per-widget, set it once at the
+Or, if you'd rather not set `publishableKey` per-widget, set it once at the
 provider level:
 
 ```tsx
-<CaptchaProvider endpoint="/api/captcha" publishableKey={...}>
+<CaptchaProvider publishableKey={...}>
   <Captcha onVerify={...} />
 </CaptchaProvider>
 ```
 
 #### Locking the proxy to your origins (production)
 
-The default `allowedOrigins: '*'` is convenient for development. In
-production, restrict to the origins you actually serve:
+The default `allowedOrigins: '*'` is convenient for development. It
+echoes the incoming `Origin` header (to support `credentials: 'include'`)
+instead of returning a wildcard `*`. In production, restrict to the
+origins you actually serve:
 
 ```ts
 import { createCaptchaProxy } from '@nexwinds/captcha/server'
 
 const proxy = createCaptchaProxy({
   allowedOrigins: ['https://your-app.com', 'https://www.your-app.com'],
-  endpoint: process.env.NEXWINDS_ENDPOINT, // optional override
 })
 export const GET = proxy.GET
 export const POST = proxy.POST
@@ -180,6 +178,7 @@ export const OPTIONS = proxy.OPTIONS
 
 Origins outside the list get `403`-equivalent preflight responses (no
 `Access-Control-Allow-Origin` set, so the browser blocks the call).
+The proxy always includes `Access-Control-Allow-Credentials: true`.
 
 #### Troubleshooting the proxy
 
@@ -272,7 +271,7 @@ do not reflect arbitrary values. `OPTIONS` preflight must return
 `204 No Content` with the same headers.
 
 If the SaaS isn't CORS-enabled yet, point the widget at a same-origin
-proxy in your app and pass `endpoint="/api/captcha"` (or any path that
+proxy in your app (or any path that
 forwards to the SaaS). The SDK has no other way around CORS — it's a
 browser-enforced boundary.
 
@@ -307,7 +306,6 @@ Content-Security-Policy:
 |---------------------------------------|--------------|----------|-----------------------------------------------|
 | `NEXT_PUBLIC_NEXWINDS_PUBLISHABLE_KEY` | client       | yes      | `pk_live_<hex>` from the dashboard.           |
 | `NEXWINDS_SECRET_KEY`                  | server only  | yes      | `sk_live_<hex>`. Used by `createServerClient`. |
-| `NEXWINDS_ENDPOINT`                    | server only  | no       | Overrides the SaaS URL for the server client.  |
 
 The `NEXT_PUBLIC_` prefix is a Next.js convention that inlines a variable
 into client bundles; the secret key must **not** have that prefix so it
@@ -322,7 +320,6 @@ beyond what it forwards in the `Authorization` header.
 ```tsx
 <Captcha
   publishableKey="pk_live_…"
-  endpoint="https://captcha.acme.com/api/v1"   // self-host friendly override
   locale="ja"                                 // 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar'
   theme="dark"                                // 'auto' | 'light' | 'dark'
   size="compact"                              // 'compact' | 'normal'

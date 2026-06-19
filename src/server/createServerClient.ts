@@ -40,12 +40,11 @@ import type {
 
 export class NexWindsServerClient {
   private readonly secretKey: string
-  private readonly endpoint: string
+  private readonly endpoint: string = DEFAULT_ENDPOINT
   private readonly fetchImpl: typeof fetch
 
   constructor(opts: CreateServerClientOptions) {
     this.secretKey = opts.secretKey
-    this.endpoint = opts.endpoint ?? DEFAULT_ENDPOINT
     this.fetchImpl = opts.fetch ?? globalThis.fetch
   }
 

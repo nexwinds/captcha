@@ -24,8 +24,6 @@ import { DEFAULT_ENDPOINT } from '../lib/constants.js'
 export const DEFAULT_PROXY_MOUNT = '/api/captcha'
 
 export interface CaptchaProxyOptions {
-  /** SaaS endpoint to forward to. Defaults to https://nexcookie.com/api/v1 */
-  endpoint?: string
   /**
    * Mount path prefix that this handler is served under. The proxy strips it
    * before forwarding. Defaults to `/api/captcha`.
@@ -62,7 +60,7 @@ function resolveOriginPolicy(
   requestOrigin: string,
   allowed: string[] | '*',
 ): string | null {
-  if (allowed === '*') return '*'
+  if (allowed === '*') return requestOrigin || '*'
   if (allowed.includes(requestOrigin)) return requestOrigin
   return null
 }
@@ -95,6 +93,7 @@ function corsHeaders(origin: string, allowed: string[] | '*'): HeadersInit {
     Vary: 'Origin',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'authorization, content-type',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
   }
   if (allowOrigin !== null) {
@@ -123,7 +122,7 @@ function stripMount(pathname: string, mount: string): string {
 export function createCaptchaProxy(
   options: CaptchaProxyOptions = {},
 ): CaptchaProxyHandlers {
-  const endpoint = options.endpoint ?? DEFAULT_ENDPOINT
+  const endpoint = DEFAULT_ENDPOINT
   const mount = options.mountPath ?? DEFAULT_PROXY_MOUNT
   const allowed = options.allowedOrigins ?? '*'
   const timeoutMs = options.timeoutMs ?? 10_000

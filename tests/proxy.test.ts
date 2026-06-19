@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createCaptchaProxy } from '../src/server/createCaptchaProxy.js'
 
-const ENDPOINT = 'https://upstream.invalid/api/v1'
+const ENDPOINT = 'https://nexcookie.com/api/v1'
 let fetchMock: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
@@ -29,27 +29,33 @@ function req(path: string, init: RequestInit = {}, opts: { origin?: string } = {
 
 describe('createCaptchaProxy', () => {
   it('exports GET, POST, OPTIONS handlers', () => {
-    const h = createCaptchaProxy({ endpoint: ENDPOINT, mountPath: '/api/captcha' })
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     expect(typeof h.GET).toBe('function')
     expect(typeof h.POST).toBe('function')
     expect(typeof h.OPTIONS).toBe('function')
   })
 
-  it('OPTIONS returns 204 with CORS headers (wildcard)', async () => {
-    const h = createCaptchaProxy({ endpoint: ENDPOINT, mountPath: '/api/captcha' })
+  it('OPTIONS returns 204 with CORS headers (wildcard echos origin)', async () => {
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     const res = await h.OPTIONS(
       req('/api/captcha/calibration', {}, { origin: 'https://app.example.com' }),
     )
     expect(res.status).toBe(204)
-    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://app.example.com')
     expect(res.headers.get('Access-Control-Allow-Methods')).toContain('POST')
     expect(res.headers.get('Access-Control-Allow-Headers')).toContain('authorization')
+    expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true')
     expect(res.headers.get('Vary')).toBe('Origin')
+  })
+
+  it('OPTIONS returns * when no origin header and allowedOrigins is *', async () => {
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
+    const res = await h.OPTIONS(req('/api/captcha/calibration'))
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
   })
 
   it('OPTIONS echoes origin when allow-list matches', async () => {
     const h = createCaptchaProxy({
-      endpoint: ENDPOINT,
       mountPath: '/api/captcha',
       allowedOrigins: ['https://app.example.com', 'https://other.com'],
     })
@@ -61,7 +67,6 @@ describe('createCaptchaProxy', () => {
 
   it('OPTIONS omits Allow-Origin when origin is not in allow-list', async () => {
     const h = createCaptchaProxy({
-      endpoint: ENDPOINT,
       mountPath: '/api/captcha',
       allowedOrigins: ['https://app.example.com'],
     })
@@ -78,14 +83,14 @@ describe('createCaptchaProxy', () => {
         headers: { 'content-type': 'application/json' },
       }),
     )
-    const h = createCaptchaProxy({ endpoint: ENDPOINT, mountPath: '/api/captcha' })
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     const res = await h.GET(
       req('/api/captcha/calibration?x=1', {
         headers: { authorization: 'Bearer pk_x' },
       }, { origin: 'https://app.example.com' }),
     )
     expect(res.status).toBe(200)
-    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://app.example.com')
     const call = fetchMock.mock.calls[0]!
     expect(call[0]).toBe(`${ENDPOINT}/calibration?x=1`)
     expect(call[1]!.method).toBe('GET')
@@ -96,7 +101,7 @@ describe('createCaptchaProxy', () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }),
     )
-    const h = createCaptchaProxy({ endpoint: ENDPOINT, mountPath: '/api/captcha' })
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     const res = await h.POST(
       req('/api/captcha/challenge/issue', {
         method: 'POST',
@@ -122,7 +127,7 @@ describe('createCaptchaProxy', () => {
         { status: 429, headers: { 'content-type': 'application/problem+json' } },
       ),
     )
-    const h = createCaptchaProxy({ endpoint: ENDPOINT, mountPath: '/api/captcha' })
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     const res = await h.GET(
       req('/api/captcha/calibration', {}, { origin: 'https://app.example.com' }),
     )
@@ -132,7 +137,7 @@ describe('createCaptchaProxy', () => {
 
   it('returns 502 with problem+json when upstream fetch throws', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
-    const h = createCaptchaProxy({ endpoint: ENDPOINT, mountPath: '/api/captcha' })
+    const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     const res = await h.GET(
       req('/api/captcha/calibration', {}, { origin: 'https://app.example.com' }),
     )
@@ -142,7 +147,7 @@ describe('createCaptchaProxy', () => {
 
   it('strips custom mount path before forwarding', async () => {
     fetchMock.mockResolvedValueOnce(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }))
-    const h = createCaptchaProxy({ endpoint: ENDPOINT, mountPath: '/api/captcha-proxy' })
+    const h = createCaptchaProxy({ mountPath: '/api/captcha-proxy' })
     const res = await h.GET(
       req('/api/captcha-proxy/challenge/issue', {}, { origin: 'https://app.example.com' }),
     )
@@ -158,7 +163,6 @@ describe('createCaptchaProxy', () => {
       return { ...init, headers }
     })
     const h = createCaptchaProxy({
-      endpoint: ENDPOINT,
       mountPath: '/api/captcha',
       beforeFetch,
     })

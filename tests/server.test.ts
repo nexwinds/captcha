@@ -16,7 +16,7 @@ function problemResponse(status: number, type: string, title: string, detail?: s
   )
 }
 
-const ENDPOINT = 'https://test.invalid/api/v1'
+const ENDPOINT = 'https://nexcookie.com/api/v1'
 
 describe('server.createServerClient', () => {
   it('returns ok:true on 200', async () => {
@@ -30,7 +30,6 @@ describe('server.createServerClient', () => {
     )
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('tk')
@@ -39,6 +38,10 @@ describe('server.createServerClient', () => {
       expect(r.siteId).toBe(1)
       expect(r.bypass).toBe(false)
     }
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${ENDPOINT}/token/verify`,
+      expect.anything()
+    )
   })
 
   it('maps 410 token-expired to reason:expired', async () => {
@@ -47,7 +50,6 @@ describe('server.createServerClient', () => {
     )
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('tk')
@@ -63,7 +65,6 @@ describe('server.createServerClient', () => {
     )
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('tk')
@@ -79,7 +80,6 @@ describe('server.createServerClient', () => {
     )
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('tk')
@@ -95,7 +95,6 @@ describe('server.createServerClient', () => {
     )
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('tk')
@@ -109,7 +108,6 @@ describe('server.createServerClient', () => {
     const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch'))
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('tk')
@@ -120,7 +118,6 @@ describe('server.createServerClient', () => {
     const fetchMock = vi.fn()
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('')
@@ -137,7 +134,6 @@ describe('server.createServerClient', () => {
     )
     const client = createServerClient({
       secretKey: 'sk_live_x',
-      endpoint: ENDPOINT,
       fetch: fetchMock as unknown as typeof fetch,
     })
     const r = await client.verifyToken('tk')
