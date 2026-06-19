@@ -1,6 +1,6 @@
 {
   "name": "@nexwinds/captcha",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Self-hosted, privacy-first, neutral-UX captcha widget. Talks to the NexWinds captcha SaaS.",
   "license": "Apache-2.0",
   "type": "module",
@@ -54,14 +54,14 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "axe-core": "^4.9.0",
-    "happy-dom": "^14.10.0",
+    "happy-dom": "^20.10.6",
     "msw": "^2.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "storybook": "^8.0.0",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.9"
   },
   "keywords": [
     "captcha",
