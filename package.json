@@ -1,6 +1,6 @@
 {
   "name": "@nexwinds/captcha",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Self-hosted, privacy-first, neutral-UX captcha widget. Talks to the NexWinds captcha SaaS.",
   "license": "Apache-2.0",
   "type": "module",

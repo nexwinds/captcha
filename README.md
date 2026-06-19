@@ -31,21 +31,22 @@ npm install @nexwinds/captcha
 
 ## Setup
 
-### 1. The Proxy (Required)
+### Proxy (Self-Hosting / CORS-free)
 
-To avoid CORS issues and keep user data on your origin, you MUST mount a proxy. In Next.js App Router:
+To avoid CORS issues and hide your SaaS usage from client-side network inspectors, you can mount a proxy in your Next.js App Router.
 
 ```ts
 // app/api/captcha/[...path]/route.ts
 import { createCaptchaProxy } from '@nexwinds/captcha/server'
 
-// We recommend explicit async function exports for full Next.js compatibility
-// to avoid 405 Method Not Allowed errors on some bundlers (e.g. Turbopack).
 const proxy = createCaptchaProxy({
   allowedOrigins: ['https://yourdomain.com'], // or '*'
-  debug: process.env.NODE_ENV === 'development', // Useful for troubleshooting 405/502 errors
+  debug: process.env.NODE_ENV === 'development',
 })
 
+// IMPORTANT: Do NOT destructure the proxy object in the export.
+// Some bundlers (like Turbopack) may fail to map the POST method correctly.
+// Use explicit async function wrappers as shown below.
 export async function GET(req: Request) { return proxy.GET(req) }
 export async function POST(req: Request) { return proxy.POST(req) }
 export async function OPTIONS(req: Request) { return proxy.OPTIONS(req) }

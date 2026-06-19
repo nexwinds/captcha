@@ -141,6 +141,9 @@ function stripMount(pathname: string, mount: string): string {
 export function createCaptchaProxy(
   options: CaptchaProxyOptions = {},
 ): CaptchaProxyHandlers {
+  if (options.debug) {
+    console.log(`[nexwinds/proxy] factory initialized (mount: ${options.mountPath ?? DEFAULT_PROXY_MOUNT})`)
+  }
   const endpoint = options.endpoint ?? NEXWINDS_SAAS_URL
   const mount = options.mountPath ?? DEFAULT_PROXY_MOUNT
   const allowed = options.allowedOrigins ?? '*'
@@ -148,7 +151,7 @@ export function createCaptchaProxy(
 
   async function handle(
     request: Request,
-    method: 'GET' | 'POST',
+    method: string,
   ): Promise<Response> {
     if (options.debug) {
       console.log(`[nexwinds/proxy] entering handle: ${method} ${request.url}`)
