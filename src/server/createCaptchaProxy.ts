@@ -41,6 +41,8 @@ export interface CaptchaProxyOptions {
   timeoutMs?: number
   /** SaaS endpoint override. Defaults to 'https://nexcookie.com/api/v1'. */
   endpoint?: string
+  /** Enable verbose logging to stdout for debugging. */
+  debug?: boolean
   /**
    * Optional hook to mutate the upstream request before it leaves your server.
    * Use this to add internal auth, swap headers, etc.
@@ -116,9 +118,20 @@ function joinUrl(base: string, tail: string, query: string): string {
 
 function stripMount(pathname: string, mount: string): string {
   const m = mount.replace(/\/+$/, '')
-  if (pathname === m || pathname === `${m}/`) return ''
-  if (pathname.startsWith(`${m}/`)) return pathname.slice(m.length + 1)
-  return pathname.replace(/^\/+/, '')
+  // Ensure we are working with a clean path
+  const p = pathname.replace(/\/+$/, '')
+  
+  if (p === m) return ''
+  if (p.startsWith(`${m}/`)) return p.slice(m.length + 1)
+  
+  // Fallback for Next.js 16 / Turbopack where the mount might be partial
+  // or the pathname might not start with the mount if rewrites are involved.
+  // We look for the common NexWinds paths as a last resort.
+  if (p.includes('/challenge/issue')) return 'challenge/issue'
+  if (p.includes('/challenge/verify')) return 'challenge/verify'
+  if (p.includes('/calibration')) return 'calibration'
+  
+  return p.replace(/^\/+/, '')
 }
 
 /**
@@ -142,9 +155,21 @@ export function createCaptchaProxy(
     const tail = stripMount(incomingUrl.pathname, mount)
     const target = joinUrl(endpoint, tail, incomingUrl.search)
 
+    if (options.debug) {
+      console.log(`[nexwinds/proxy] ${method} ${incomingUrl.pathname} -> ${target}`)
+    }
+
     const headers = new Headers()
+    // Forward essential headers
     const auth = request.headers.get('authorization')
     if (auth) headers.set('authorization', auth)
+    
+    const userAgent = request.headers.get('user-agent')
+    if (userAgent) headers.set('user-agent', userAgent)
+
+    const accept = request.headers.get('accept')
+    if (accept) headers.set('accept', accept)
+
     if (method === 'POST') {
       headers.set('content-type', 'application/json')
     }
@@ -154,7 +179,13 @@ export function createCaptchaProxy(
       headers,
     }
     if (method === 'POST') {
-      init.body = await request.text()
+      try {
+        init.body = await request.text()
+      } catch (e) {
+        if (options.debug) {
+          console.error(`[nexwinds/proxy] failed to read request body: ${e}`)
+        }
+      }
     }
 
     if (options.beforeFetch) {
@@ -170,17 +201,26 @@ export function createCaptchaProxy(
       upstream = await fetch(target, init)
     } catch (e) {
       clearTimeout(timer)
+      const isAbort = e instanceof Error && e.name === 'AbortError'
+      const status = isAbort ? 504 : 502
+      const title = isAbort ? 'Gateway Timeout' : 'Bad Gateway'
+      
+      if (options.debug) {
+        console.error(`[nexwinds/proxy] upstream fetch failed: ${target}`, e)
+      }
+
       return new Response(
         JSON.stringify({
           type: 'about:blank',
-          title: 'Bad Gateway',
-          status: 502,
+          title,
+          status,
           detail: e instanceof Error ? e.message : 'upstream fetch failed',
         }),
         {
-          status: 502,
+          status,
           headers: {
             'content-type': 'application/problem+json',
+            'x-nxw-proxy-error': 'upstream_failure',
             ...corsHeaders(origin, allowed),
           },
         },
@@ -188,10 +228,18 @@ export function createCaptchaProxy(
     }
     clearTimeout(timer)
 
+    if (options.debug && !upstream.ok) {
+      console.warn(`[nexwinds/proxy] upstream returned ${upstream.status} for ${target}`)
+    }
+
     // Pass through the upstream body verbatim; only headers we own get rewritten.
     const out = new Response(upstream.body, { status: upstream.status })
     const ct = upstream.headers.get('content-type')
     if (ct) out.headers.set('content-type', ct)
+    
+    // Add a marker to distinguish SaaS errors from Proxy errors
+    out.headers.set('x-nxw-upstream-status', String(upstream.status))
+
     for (const [k, v] of Object.entries(corsHeaders(origin, allowed))) {
       out.headers.set(k, v)
     }

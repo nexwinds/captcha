@@ -39,12 +39,25 @@ To avoid CORS issues and keep user data on your origin, you MUST mount a proxy. 
 // app/api/captcha/[...path]/route.ts
 import { createCaptchaProxy } from '@nexwinds/captcha/server'
 
-const proxy = createCaptchaProxy()
+// We recommend explicit async function exports for full Next.js compatibility
+// to avoid 405 Method Not Allowed errors on some bundlers (e.g. Turbopack).
+const proxy = createCaptchaProxy({
+  allowedOrigins: ['https://yourdomain.com'], // or '*'
+  debug: process.env.NODE_ENV === 'development', // Useful for troubleshooting 405/502 errors
+})
 
 export async function GET(req: Request) { return proxy.GET(req) }
 export async function POST(req: Request) { return proxy.POST(req) }
 export async function OPTIONS(req: Request) { return proxy.OPTIONS(req) }
 ```
+
+### Troubleshooting Proxy Errors
+
+If you encounter `405 Method Not Allowed` or `502 Bad Gateway`:
+
+1. Enable `debug: true` in `createCaptchaProxy` to see the exact upstream URLs being called in your server logs.
+2. Check the `x-nxw-upstream-status` header in the browser's Network tab. If it's present, the error is coming from the SaaS, not the proxy.
+3. Check the `x-nxw-proxy-error` header. If it says `upstream_failure`, the proxy couldn't reach the SaaS (check your server's internet connection or firewall).
 
 ### 2. The Provider
 
