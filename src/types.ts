@@ -181,7 +181,6 @@ export interface CaptchaContextValue {
   locale: Locale
   theme: 'auto' | 'light' | 'dark'
   endpoint: string
-  isReady: boolean
 }
 
 export interface CaptchaProps {

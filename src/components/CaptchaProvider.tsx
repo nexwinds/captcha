@@ -5,7 +5,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { CaptchaContextValue, Locale } from '../types.js'
-import { DEFAULT_PROXY_MOUNT } from '../lib/constants.js'
+import { DEFAULT_ENDPOINT } from '../lib/constants.js'
 
 const CaptchaContext = createContext<CaptchaContextValue | null>(null)
 
@@ -18,7 +18,7 @@ export interface CaptchaProviderProps {
   theme?: 'auto' | 'light' | 'dark'
   /** 
    * SaaS endpoint override. 
-   * Defaults to '/api/captcha'.
+   * Defaults to 'https://nexcookie.com/api/v1'.
    */
   endpoint?: string
   children: ReactNode
@@ -33,8 +33,7 @@ export function CaptchaProvider(props: CaptchaProviderProps) {
       siteKey,
       locale: (props.locale ?? 'en') as Locale,
       theme: props.theme ?? 'auto',
-      endpoint: props.endpoint ?? DEFAULT_PROXY_MOUNT,
-      isReady: true,
+      endpoint: props.endpoint ?? DEFAULT_ENDPOINT,
     }),
     [siteKey, props.locale, props.theme, props.endpoint],
   )

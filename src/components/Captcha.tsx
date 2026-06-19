@@ -71,7 +71,6 @@ export function Captcha(props: CaptchaProps) {
 
   const isBusy =
     !fingerprintReady ||
-    (ctx && !ctx.isReady) ||
     captcha.state === 'issuing' ||
     captcha.state === 'solving' ||
     captcha.state === 'verifying'

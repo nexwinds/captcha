@@ -18,7 +18,7 @@ import {
 } from '../lib/http.js'
 import { solve } from '../lib/pow.js'
 import {
-  DEFAULT_PROXY_MOUNT,
+  DEFAULT_ENDPOINT,
   FALLBACK_CALIBRATION,
   HTTP_TIMEOUT_MS,
   MAX_POW_BITS,
@@ -77,7 +77,7 @@ async function fetchCalibration(endpoint: string): Promise<Calibration> {
 }
 
 export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
-  const endpoint = opts.endpoint || DEFAULT_PROXY_MOUNT
+  const endpoint = opts.endpoint || DEFAULT_ENDPOINT
   const [state, setState] = useState<CaptchaState>('idle')
   const [calibration, setCalibration] = useState<Calibration | null>(null)
   const [lastError, setLastError] = useState<string | null>(null)

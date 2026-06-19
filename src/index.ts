@@ -44,6 +44,7 @@ export {
 export type { FetchOptions } from './lib/http.js'
 
 export {
+  DEFAULT_ENDPOINT,
   FALLBACK_CALIBRATION,
   HTTP_TIMEOUT_MS,
   MAX_POW_BITS,

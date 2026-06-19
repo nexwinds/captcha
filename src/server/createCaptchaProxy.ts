@@ -97,11 +97,13 @@ function stripMount(pathname: string, mount: string): string {
   if (p === m) return ''
   if (p.startsWith(`${m}/`)) return p.slice(m.length + 1)
   
+  // If the path contains our known endpoints, return them directly.
+  // This is the most reliable fallback for Next.js 16 / Turbopack.
   if (p.includes('/challenge/issue')) return 'challenge/issue'
   if (p.includes('/challenge/verify')) return 'challenge/verify'
   if (p.includes('/calibration')) return 'calibration'
   
-  return p.replace(/^\/+/, '')
+  return p.split('/').pop() || ''
 }
 
 /**
