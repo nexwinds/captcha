@@ -156,6 +156,19 @@ export function createCaptchaProxy(
     if (options.debug) {
       console.log(`[nexwinds/proxy] entering handle: ${method} ${request.url}`)
     }
+    
+    // Safety check for body reading on POST
+    let bodyText: string | undefined = undefined;
+    if (method === 'POST') {
+      try {
+        if (options.debug) console.log(`[nexwinds/proxy] reading POST body...`)
+        bodyText = await request.text()
+        if (options.debug) console.log(`[nexwinds/proxy] POST body read success (${bodyText.length} bytes)`)
+      } catch (e) {
+        console.error(`[nexwinds/proxy] CRITICAL: Failed to read POST request body: ${e}`)
+      }
+    }
+
     const origin = readRequestOrigin(request)
     const incomingUrl = new URL(request.url)
     const tail = stripMount(incomingUrl.pathname, mount)
@@ -183,15 +196,7 @@ export function createCaptchaProxy(
     let init: RequestInit = {
       method,
       headers,
-    }
-    if (method === 'POST') {
-      try {
-        init.body = await request.text()
-      } catch (e) {
-        if (options.debug) {
-          console.error(`[nexwinds/proxy] failed to read request body: ${e}`)
-        }
-      }
+      body: bodyText,
     }
 
     if (options.beforeFetch) {
@@ -258,8 +263,11 @@ export function createCaptchaProxy(
   }
 
   async function POST(request: Request): Promise<Response> {
-    if (options.debug) console.log(`[nexwinds/proxy] POST invoked`)
-    return handle(request, 'POST')
+    if (options.debug) console.log(`[nexwinds/proxy] POST invoked for ${request.url}`)
+    return handle(request, 'POST').catch(e => {
+      console.error(`[nexwinds/proxy] Uncaught error in POST handler:`, e)
+      return new Response(JSON.stringify({ error: String(e) }), { status: 500 })
+    })
   }
 
   async function OPTIONS(request: Request): Promise<Response> {
