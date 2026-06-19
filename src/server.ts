@@ -21,7 +21,6 @@ export {
 } from './server/createServerClient.js'
 export {
   createCaptchaProxy,
-  DEFAULT_PROXY_MOUNT,
 } from './server/createCaptchaProxy.js'
 export type {
   CaptchaProxyOptions,
@@ -38,4 +37,4 @@ export type {
   TokenVerifyPrincipal,
   Problem,
 } from './types.js'
-export { DEFAULT_ENDPOINT } from './lib/constants.js'
+export { DEFAULT_ENDPOINT, DEFAULT_PROXY_MOUNT } from './lib/constants.js'

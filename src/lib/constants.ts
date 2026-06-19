@@ -7,6 +7,9 @@
 export const DEFAULT_ENDPOINT = 'https://nexcookie.com/api/v1'
 export const DEFAULT_FALLBACK_LOCALE = 'en' as const
 
+/** Path the consumer mounts the proxy under. The factory strips this prefix. */
+export const DEFAULT_PROXY_MOUNT = '/api/captcha'
+
 /** Reasonable time budget for a single HTTP call to the SaaS. */
 export const HTTP_TIMEOUT_MS = 10_000
 

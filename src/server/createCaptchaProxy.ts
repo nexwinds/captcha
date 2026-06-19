@@ -18,10 +18,7 @@
  *   - Any standard Web server
  */
 
-import { DEFAULT_ENDPOINT } from '../lib/constants.js'
-
-/** Path the consumer mounts the proxy under. The factory strips this prefix. */
-export const DEFAULT_PROXY_MOUNT = '/api/captcha'
+import { DEFAULT_ENDPOINT, DEFAULT_PROXY_MOUNT } from '../lib/constants.js'
 
 export interface CaptchaProxyOptions {
   /**
