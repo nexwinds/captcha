@@ -175,20 +175,32 @@ export type VerifyOutcome =
 export type Locale = 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar'
 
 export interface CaptchaContextValue {
-  publishableKey: string
+  /** @deprecated use siteKey */
+  publishableKey?: string
+  siteKey: string
   locale: Locale
   theme: 'auto' | 'light' | 'dark'
+  endpoint: string
+  isReady: boolean
 }
 
 export interface CaptchaProps {
-  /** pk_live_<random_hex> from the captcha dashboard. */
-  publishableKey: string
+  /** @deprecated use siteKey */
+  publishableKey?: string
+  /** siteKey from the captcha dashboard. */
+  siteKey?: string
   /** Locale for UI strings. Defaults to navigator.language or 'en'. */
   locale?: Locale
   /** "auto" follows the user's prefers-color-scheme. */
   theme?: 'auto' | 'light' | 'dark'
-  /** Fired on every terminal outcome. */
-  onVerify: (outcome: VerifyOutcome) => void
+  /** SaaS endpoint override (e.g. for proxying). */
+  endpoint?: string
+  /** Fired when the captcha is successfully solved. */
+  onSuccess?: (token: string) => void
+  /** Fired when the challenge expires. */
+  onExpire?: () => void
+  /** Fired on every terminal outcome (legacy). */
+  onVerify?: (outcome: VerifyOutcome) => void
   /** Fired on non-terminal errors (network, fetch failure, etc.). */
   onError?: (err: { message: string }) => void
   className?: string
@@ -205,6 +217,8 @@ export interface CreateServerClientOptions {
   secretKey: string
   /** Custom fetch (for tests or self-hosted runtimes). */
   fetch?: typeof fetch
+  /** SaaS endpoint override. */
+  endpoint?: string
 }
 
 export interface VerifyTokenOptions {

@@ -34,17 +34,27 @@ export function Captcha(props: CaptchaProps) {
   const honeypot = useHoneypot()
   const { t } = useTranslations()
 
+  const siteKey = props.siteKey ?? props.publishableKey ?? ctx?.siteKey ?? ''
+  const endpoint = props.endpoint ?? ctx?.endpoint
+
   const onVerifyRef = useRef(props.onVerify)
+  const onSuccessRef = useRef(props.onSuccess)
+  const onExpireRef = useRef(props.onExpire)
   const onErrorRef = useRef(props.onError)
   onVerifyRef.current = props.onVerify
+  onSuccessRef.current = props.onSuccess
+  onExpireRef.current = props.onExpire
   onErrorRef.current = props.onError
 
   const captcha = useCaptcha({
-    publishableKey: props.publishableKey,
+    siteKey,
     fingerprintHash,
     getSignals: signals.getSignals,
-    onVerify: useCallback((o: VerifyOutcome) => onVerifyRef.current(o), []),
+    onVerify: useCallback((o: VerifyOutcome) => onVerifyRef.current?.(o), []),
+    onSuccess: useCallback((t: string) => onSuccessRef.current?.(t), []),
+    onExpire: useCallback(() => onExpireRef.current?.(), []),
     onError: useCallback((e: { message: string }) => onErrorRef.current?.(e), []),
+    endpoint,
   })
 
   const id = useId()
@@ -60,6 +70,8 @@ export function Captcha(props: CaptchaProps) {
   }, [])
 
   const isBusy =
+    !fingerprintReady ||
+    (ctx && !ctx.isReady) ||
     captcha.state === 'issuing' ||
     captcha.state === 'solving' ||
     captcha.state === 'verifying'

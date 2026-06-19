@@ -37,7 +37,9 @@ describe('<Captcha /> a11y', () => {
     render(<Captcha publishableKey="pk_test_x" onVerify={() => {}} />)
     const btn = await screen.findByRole('checkbox', { name: /I am human/i })
     expect(btn).toBeInTheDocument()
-    expect(btn).toHaveAttribute('aria-busy', 'false')
+    await waitFor(() => {
+      expect(btn).toHaveAttribute('aria-busy', 'false')
+    })
     expect(btn).toHaveAttribute('aria-checked', 'false')
   })
 

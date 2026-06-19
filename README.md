@@ -42,32 +42,29 @@ React 18+ and Next.js 13+ (App Router) are supported as peer dependencies.
 ```tsx
 'use client'
 
+import { useState } from 'react'
 import { Captcha } from '@nexwinds/captcha'
-import type { VerifyOutcome } from '@nexwinds/captcha'
 
 export default function Form() {
+  const [token, setToken] = useState<string | null>(null)
+
   return (
     <form action="/api/submit" method="POST">
       {/* ... your fields ... */}
       <Captcha
-        publishableKey={process.env.NEXT_PUBLIC_NEXWINDS_PUBLISHABLE_KEY!}
-        onVerify={(outcome: VerifyOutcome) => {
-          if (outcome.status === 'success' || outcome.status === 'bypass') {
-            // hand `outcome.token` to the form submission
-          } else if (outcome.status === 'blocked') {
-            // show a polite retry
-          } else {
-            // network or unknown error
-          }
-        }}
+        siteKey={process.env.NEXT_PUBLIC_NEXWINDS_SITE_KEY!}
+        onSuccess={(token) => setToken(token)}
       />
-      <button type="submit">Send</button>
+      <input type="hidden" name="captcha_token" value={token ?? ''} />
+      <button type="submit" disabled={!token}>Send</button>
     </form>
   )
 }
 ```
 
-### Provider (optional)
+### Provider (optional & Smart Discovery)
+
+The `CaptchaProvider` can handle global configuration and **auto-discover** your proxy endpoint to avoid CORS issues.
 
 ```tsx
 import { CaptchaProvider, Captcha } from '@nexwinds/captcha'
@@ -75,11 +72,12 @@ import { CaptchaProvider, Captcha } from '@nexwinds/captcha'
 export default function Page() {
   return (
     <CaptchaProvider
-      publishableKey={process.env.NEXT_PUBLIC_NEXWINDS_PUBLISHABLE_KEY!}
+      siteKey={process.env.NEXT_PUBLIC_NEXWINDS_SITE_KEY!}
+      autoDiscover={true}
       locale="pt"
       theme="auto"
     >
-      <Captcha onVerify={(o) => console.log(o)} />
+      <Captcha onSuccess={(token) => console.log('Solved!', token)} />
     </CaptchaProvider>
   )
 }

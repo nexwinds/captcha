@@ -39,6 +39,8 @@ export interface CaptchaProxyOptions {
   allowedOrigins?: string[] | '*'
   /** Upstream fetch timeout in ms. Defaults to 10000. */
   timeoutMs?: number
+  /** SaaS endpoint override. Defaults to DEFAULT_ENDPOINT. */
+  endpoint?: string
   /**
    * Optional hook to mutate the upstream request before it leaves your server.
    * Use this to add internal auth, swap headers, etc.
@@ -122,7 +124,7 @@ function stripMount(pathname: string, mount: string): string {
 export function createCaptchaProxy(
   options: CaptchaProxyOptions = {},
 ): CaptchaProxyHandlers {
-  const endpoint = DEFAULT_ENDPOINT
+  const endpoint = options.endpoint ?? DEFAULT_ENDPOINT
   const mount = options.mountPath ?? DEFAULT_PROXY_MOUNT
   const allowed = options.allowedOrigins ?? '*'
   const timeoutMs = options.timeoutMs ?? 10_000

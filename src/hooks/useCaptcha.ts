@@ -40,14 +40,18 @@ export type CaptchaState =
   | 'error'
 
 export interface UseCaptchaOptions {
-  publishableKey: string
+  siteKey: string
   fingerprintHash: string
   /** Returns a fresh signals snapshot, called at verify time. */
   getSignals: () => import('../types.js').SignalsV1
-  onVerify: (outcome: VerifyOutcome) => void
+  onVerify?: (outcome: VerifyOutcome) => void
+  onSuccess?: (token: string) => void
+  onExpire?: () => void
   onError?: (err: { message: string }) => void
   /** Abort the in-flight solve/verify (component unmount). */
   signal?: AbortSignal
+  /** SaaS endpoint override. */
+  endpoint?: string
 }
 
 export interface UseCaptchaResult {
@@ -62,31 +66,35 @@ export interface UseCaptchaResult {
 let calibrationCache: { value: Calibration; fetchedAt: number } | null = null
 const CALIBRATION_TTL_MS = 24 * 60 * 60 * 1000
 
-async function fetchCalibration(): Promise<Calibration> {
+async function fetchCalibration(endpoint: string): Promise<Calibration> {
   const now = Date.now()
   if (calibrationCache && now - calibrationCache.fetchedAt < CALIBRATION_TTL_MS) {
     return calibrationCache.value
   }
-  const cal = await getCalibration(DEFAULT_ENDPOINT, { timeoutMs: HTTP_TIMEOUT_MS })
+  const cal = await getCalibration(endpoint, { timeoutMs: HTTP_TIMEOUT_MS })
   calibrationCache = { value: cal, fetchedAt: now }
   return cal
 }
 
 export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
-  const endpoint = DEFAULT_ENDPOINT
+  const endpoint = opts.endpoint ?? DEFAULT_ENDPOINT
   const [state, setState] = useState<CaptchaState>('idle')
   const [calibration, setCalibration] = useState<Calibration | null>(null)
   const [lastError, setLastError] = useState<string | null>(null)
   const inflightRef = useRef<AbortController | null>(null)
   const onVerifyRef = useRef(opts.onVerify)
+  const onSuccessRef = useRef(opts.onSuccess)
+  const onExpireRef = useRef(opts.onExpire)
   const onErrorRef = useRef(opts.onError)
   onVerifyRef.current = opts.onVerify
+  onSuccessRef.current = opts.onSuccess
+  onExpireRef.current = opts.onExpire
   onErrorRef.current = opts.onError
 
   useEffect(() => {
     if (calibration) return
     let cancelled = false
-    fetchCalibration()
+    fetchCalibration(endpoint)
       .then((c) => {
         if (cancelled) return
         setCalibration(c)
@@ -100,7 +108,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
     return () => {
       cancelled = true
     }
-  }, [calibration])
+  }, [calibration, endpoint])
 
   const start = useCallback(async () => {
     if (state !== 'idle' && state !== 'blocked' && state !== 'error' && state !== 'success' && state !== 'bypass') {
@@ -118,7 +126,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
       challenge = await issueChallenge(
         endpoint,
         { fingerprintHash: opts.fingerprintHash },
-        { publishableKey: opts.publishableKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
+        { publishableKey: opts.siteKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
       )
       if (!challenge) throw new Error('issueChallenge returned null')
       const ch = challenge
@@ -144,44 +152,47 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
           signals: opts.getSignals(),
           fingerprintHash: opts.fingerprintHash,
         },
-        { publishableKey: opts.publishableKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
+        { publishableKey: opts.siteKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
       )
 
       const ui: VerifyOutcome = mapOutcome(outcome)
       if (ui.status === 'success' || ui.status === 'bypass') {
         setState(ui.status)
+        onSuccessRef.current?.(ui.token)
       } else {
         setState('blocked')
       }
-      onVerifyRef.current(ui)
+      onVerifyRef.current?.(ui)
     } catch (e) {
       if (ac.signal.aborted) return
       const msg = e instanceof Error ? e.message : String(e)
       setLastError(msg)
       setState('error')
       if (e instanceof CaptchaHttpError) {
-        onVerifyRef.current({
+        const ui: VerifyOutcome = {
           status: 'blocked',
           reason: httpStatusToReason(e.status),
           problem: e.problem,
-        })
+        }
+        onVerifyRef.current?.(ui)
       } else if (e instanceof CaptchaTimeoutError) {
         onErrorRef.current?.({ message: msg })
-        onVerifyRef.current({ status: 'error', reason: 'timeout', message: msg })
+        onVerifyRef.current?.({ status: 'error', reason: 'timeout', message: msg })
       } else if (e instanceof CaptchaNetworkError) {
         onErrorRef.current?.({ message: msg })
-        onVerifyRef.current({ status: 'error', reason: 'network', message: msg })
+        onVerifyRef.current?.({ status: 'error', reason: 'network', message: msg })
       } else {
         onErrorRef.current?.({ message: msg })
-        onVerifyRef.current({ status: 'error', reason: 'unknown', message: msg })
+        onVerifyRef.current?.({ status: 'error', reason: 'unknown', message: msg })
       }
     }
   }, [
     state,
-    opts.publishableKey,
+    opts.siteKey,
     opts.fingerprintHash,
     opts.getSignals,
     calibration,
+    endpoint,
   ])
 
   const reset = useCallback(() => {

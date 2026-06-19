@@ -44,6 +44,28 @@ describe('server.createServerClient', () => {
     )
   })
 
+  it('respects the custom endpoint option', async () => {
+    const CUSTOM_ENDPOINT = 'https://proxy.example.com/api/v1'
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        ok: true,
+        siteId: 1,
+        principal: { ip: '1.2.3.4', fingerprintHash: 'fp' },
+        bypass: false,
+      }),
+    )
+    const client = createServerClient({
+      secretKey: 'sk_live_x',
+      endpoint: CUSTOM_ENDPOINT,
+      fetch: fetchMock as unknown as typeof fetch,
+    })
+    await client.verifyToken('tk')
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${CUSTOM_ENDPOINT}/token/verify`,
+      expect.anything()
+    )
+  })
+
   it('maps 410 token-expired to reason:expired', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       problemResponse(410, 'https://nexcookie.com/probs/token-expired', 'Token Expired', 'expired'),
