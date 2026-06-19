@@ -1,0 +1,12 @@
+{
+  "label": "I am human",
+  "verifying": "Verifying…",
+  "success": "Verified",
+  "bypass": "Verified (entitled)",
+  "warning": "Verification is taking a little longer than usual…",
+  "error": "Verification failed. Please try again.",
+  "retry": "Try again",
+  "expired": "Verification expired. Please verify again.",
+  "rate_limited": "Too many attempts. Please wait a moment and try again.",
+  "fail_open": "Verification bypassed (service unavailable)."
+}

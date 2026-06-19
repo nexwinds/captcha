@@ -1,0 +1,645 @@
+openapi: 3.1.0
+
+info:
+  title: NexWinds Captcha SaaS API
+  version: 1.0.0
+  summary: Wire contract for the @nexwinds/captcha widget.
+  description: |
+    This is the **wire contract** between the `@nexwinds/captcha` widget
+    (running on a third-party site) and the captcha SaaS hosted inside
+    Nexcookie (Next.js 16, Bun, Drizzle, Postgres, Redis, BetterAuth).
+
+    Widget authors: import this file into your type generator
+    (`openapi-typescript`, `orval`, `openapi-generator`) and never hand-roll
+    the request/response types. If this spec and the running SaaS disagree,
+    **this file is the source of truth**.
+
+    ### CORS
+    - Allowed methods: `GET, POST, OPTIONS`
+    - Allowed request headers: `Content-Type, Authorization`
+    - `Access-Control-Allow-Credentials: true`
+    - Origin match: suffix match; `example.com` matches `example.com` and
+      `*.example.com`. Missing `Origin` → no CORS headers emitted.
+    - Preflight handled on every route.
+
+    ### Auth
+    - All `/api/v1/*` routes accept `Authorization: Bearer <key>`.
+    - `pk_live_<random_hex>` is the **publishable** key (safe in the browser).
+    - `sk_live_<random_hex>` is the **secret** key (server-to-server only).
+    - The publishable key is the identifier — there is no separate `siteId`
+      sent in the wire body.
+
+    ### Error format
+    All non-2xx responses use `application/problem+json` (RFC 7807):
+    `{ type, title, status, detail, instance? }`.
+
+    ### Rate limiting
+    - Only `POST /api/v1/challenge/verify` is rate-limited (Redis sorted
+      set, sliding 20-minute window).
+    - Bucket key: `${ip}:${fingerprintHash}` — the unique visitor
+      identity, not IP alone.
+    - Default limit: 10 hits per 20 min per bucket. Not configurable
+      per-domain in v1.
+    - **No `X-RateLimit-*` headers. No `Retry-After`.** Widgets back off
+      locally on 429.
+    - Per-IP-only, per-fingerprint-only, and per-publishable-key caps
+      (`NEXWINDS_CAPTCHA_RL_IP`, `RL_FP`, `RL_KEY`) are deferred to v1.1.
+
+    ### Failure mode (fail-open, behavior-locked)
+    On internal server error, the SaaS returns `200 OK` with
+    `{ status: "success", failOpen: true }`. Widgets must treat this as a
+    successful, time-bounded token and never as a refusal.
+
+    ### Out of scope for v1
+    i18n / locale negotiation, signed webhooks, telemetry, persistent
+    IP/fingerprint banning. See CLARIFY_NEXCOOKIE.md § H, K, F4.
+
+  contact:
+    name: NexWinds
+    url: https://nexwinds.com
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: https://nexcookie.com/api/v1
+    description: Production (hosted inside Nexcookie)
+  - url: https://staging.nexcookie.com/api/v1
+    description: Staging
+
+tags:
+  - name: captcha
+    description: Captcha issuance and verification.
+  - name: token
+    description: One-time token validation (server-to-server).
+  - name: discovery
+    description: Public discovery and calibration endpoints.
+
+security: []   # per-operation security defined below
+
+paths:
+
+  /calibration:
+    get:
+      tags: [discovery]
+      operationId: getCalibration
+      summary: PoW difficulty bit table.
+      description: |
+        Returns the SHA-256 leading-zeros bit counts the widget must use per
+        risk band. Public, unauthenticated. Cached for 24h by the client.
+      security: []
+      responses:
+        '200':
+          description: Calibration document.
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: Always `public, max-age=86400`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Calibration' }
+              examples:
+                default:
+                  value: { v: 1, low: 16, medium: 18, high: 20, critical: 23 }
+
+  /challenge/issue:
+    post:
+      tags: [captcha]
+      operationId: issueChallenge
+      summary: Issue a PoW challenge.
+      description: |
+        Mints a challenge nonce and stores it in Redis with a 120 s TTL.
+        Returns the bit count the widget must solve for.
+      security:
+        - PublishableKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChallengeIssueRequest' }
+            examples:
+              minimal:
+                value: { fingerprintHash: "fp_8f4356616b4a2e5d7a8b9c0d1e2f3a4b" }
+      responses:
+        '200':
+          description: Challenge issued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChallengeIssueResponse' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Captcha site not found or disabled.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                disabled:
+                  value:
+                    type: "https://nexcookie.com/probs/site-not-found"
+                    title: "Site Not Found"
+                    status: 404
+                    detail: "Captcha is disabled for this domain"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /challenge/verify:
+    post:
+      tags: [captcha]
+      operationId: verifyChallenge
+      summary: Verify a PoW solution and behavioral signals.
+      description: |
+        1. Rate limit (Redis sorted set; default 10/20 min per
+           `${ip}:${fingerprintHash}` bucket).
+        2. PoW: the server computes
+           `sha256( concat(utf8("<challengeId>:<nonce>"), hexDecode(clientHash)) )`
+           and asserts at least `bits` leading-zero bits, where `bits` is
+           `domain.difficulty` bumped by the risk band (see
+           `getRequiredBits` in `lib/captcha/signals.ts`).
+        3. Server classifies the v1 signals payload into a risk band.
+        4. Cross-check: high → `max(site+2, 20)`, critical → `max(site+3, 23)`.
+        5. Entitlement check via `entitlement.hasBypassEntitlement`. If
+           entitled → returns a `bypass` token; otherwise returns a
+           `success` token. Both payloads include `iat` (Unix seconds)
+           and `exp` (Unix seconds).
+        6. On internal error: returns `200` with `failOpen: true`.
+      security:
+        - PublishableKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChallengeVerifyRequest' }
+      responses:
+        '200':
+          description: |
+            Verification outcome. Three possible shapes:
+            - `success`: standard path.
+            - `bypass`: caller is entitled (NEXWINDS billing / `nwCompanyId`).
+            - `failOpen`: server error, behavior-locked open.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ChallengeVerifySuccess'
+                  - $ref: '#/components/schemas/ChallengeVerifyBypass'
+                  - $ref: '#/components/schemas/ChallengeVerifyFailOpen'
+                discriminator:
+                  propertyName: status
+                  mapping:
+                    success: '#/components/schemas/ChallengeVerifySuccess'
+                    bypass: '#/components/schemas/ChallengeVerifyBypass'
+                    success.failOpen: '#/components/schemas/ChallengeVerifyFailOpen'
+        '403':
+          description: |
+            Policy rejection (`invalid-pow`, `insufficient-difficulty`,
+            `policy`, `expired`). The `detail` field may include the required
+            bit count for the next attempt (no structured `nextBits` field).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                invalidPow:
+                  value:
+                    type: "https://nexcookie.com/probs/invalid-pow"
+                    title: "Invalid Proof of Work"
+                    status: 403
+                    detail: "PoW hash does not meet required difficulty"
+                insufficientDifficulty:
+                  value:
+                    type: "https://nexcookie.com/probs/insufficient-difficulty"
+                    title: "Insufficient Difficulty"
+                    status: 403
+                    detail: "Required 20 bits, got 18"
+        '429':
+          description: Rate limit exceeded. No `Retry-After` header is sent.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                rateLimited:
+                  value:
+                    type: "https://nexcookie.com/probs/rate-limited"
+                    title: "Too Many Requests"
+                    status: 429
+                    detail: "10 requests per 20 minutes per ip:fingerprintHash bucket"
+        '500':
+          description: |
+            Hard internal error (returned as 5xx — the widget should also
+            treat this as fail-open by policy, but the server will not
+            always return a clean 200 on every failure path).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /token/verify:
+    post:
+      tags: [token]
+      operationId: verifyToken
+      summary: Validate a one-time captcha token.
+      description: |
+        Server-to-server only. Called by the consumer's Next.js backend with
+        the **secret** key in `Authorization: Bearer …`. Consumes the token
+        (single-use) and returns the principal it was issued for.
+      security:
+        - SecretKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenVerifyRequest' }
+            examples:
+              minimal:
+                value: { token: "abcd1234.ef567890" }
+      responses:
+        '200':
+          description: Token valid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenVerifySuccess' }
+        '400':
+          description: |
+            `invalid-token` (malformed, signature failure, or unknown id).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                invalidToken:
+                  value:
+                    type: "https://nexcookie.com/probs/invalid-token"
+                    title: "Invalid Token"
+                    status: 400
+                    detail: "Token signature does not verify"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '410':
+          description: |
+            `token-expired` or `token-revoked`. Both are returned as 410 Gone.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                expired:
+                  value:
+                    type: "https://nexcookie.com/probs/token-expired"
+                    title: "Token Expired"
+                    status: 410
+                    detail: "Token expired at 2026-06-19T12:00:00Z"
+                revoked:
+                  value:
+                    type: "https://nexcookie.com/probs/token-revoked"
+                    title: "Token Revoked"
+                    status: 410
+                    detail: "Domain revoked all tokens at 2026-06-19T12:00:00Z"
+
+  /.well-known/nexwinds.json:
+    get:
+      tags: [discovery]
+      operationId: getWellKnown
+      summary: Service discovery document.
+      description: |
+        Public discovery file. The widget reads this to learn its
+        `endpoint` and to pin the public service fingerprint.
+      security: []
+      responses:
+        '200':
+          description: Discovery document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WellKnown' }
+              examples:
+                production:
+                  value:
+                    service: nexwinds-captcha
+                    version: 1.0.0
+                    endpoint: "https://nexcookie.com/api/v1"
+                    fingerprint: "sha256:8f4356616b4a2e5d7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f"
+
+components:
+
+  securitySchemes:
+    PublishableKey:
+      type: http
+      scheme: bearer
+      bearerFormat: pk_live_<random_hex>
+      description: |
+        Site-scoped publishable key, safe to embed in the browser.
+        Format: `pk_live_<32-byte-hex>`. Identifies the captcha site 1-to-1.
+    SecretKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_live_<random_hex>
+      description: |
+        Server-only secret key. Used on `POST /api/v1/token/verify` to
+        consume a one-time token. Format: `sk_live_<32-byte-hex>`.
+        Hashed with `node:crypto.scryptSync` on the server.
+
+  responses:
+    BadRequest:
+      description: Malformed request body.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Missing or invalid `Authorization` header.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            missing:
+              value:
+                type: "https://nexcookie.com/probs/unauthorized"
+                title: "Unauthorized"
+                status: 401
+                detail: "Missing or invalid publishable key"
+    InternalError:
+      description: Internal server error. The widget should also treat this as fail-open.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+
+    Calibration:
+      type: object
+      additionalProperties: false
+      required: [v, low, medium, high, critical]
+      properties:
+        v:        { type: integer, const: 1, examples: [1] }
+        low:      { type: integer, minimum: 0, maximum: 64, examples: [16] }
+        medium:   { type: integer, minimum: 0, maximum: 64, examples: [18] }
+        high:     { type: integer, minimum: 0, maximum: 64, examples: [20] }
+        critical: { type: integer, minimum: 0, maximum: 64, examples: [23] }
+
+    ChallengeIssueRequest:
+      type: object
+      additionalProperties: false
+      required: [fingerprintHash]
+      properties:
+        fingerprintHash:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: |
+            Widget-computed fingerprint hash. v1 is opaque to the server;
+            no rotation logic is performed server-side.
+          examples: ["fp_8f4356616b4a2e5d7a8b9c0d1e2f3a4b"]
+
+    ChallengeIssueResponse:
+      type: object
+      additionalProperties: false
+      required: [challengeId, nonce, issuedAt, expiresAt, bits, origin]
+      properties:
+        challengeId: { type: string, examples: ["9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"] }
+        nonce:
+          type: string
+          minLength: 64
+          maxLength: 64
+          description: 64-character hex string (32 bytes).
+        issuedAt:  { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        bits:
+          type: integer
+          minimum: 0
+          maximum: 64
+          description: |
+            Bit count the widget must solve for. Defaults to 18 (medium).
+        origin:
+          type: string
+          const: nexwinds
+
+    SignalsV1:
+      type: object
+      additionalProperties: false
+      required: [v, dwellMs, timeToClickMs, mouseMovements, keyboardInteractions]
+      properties:
+        v: { type: integer, const: 1, examples: [1] }
+        dwellMs:
+          type: integer
+          minimum: 0
+          maximum: 600000
+          description: Milliseconds the widget was visible before click.
+        timeToClickMs:
+          type: integer
+          minimum: 0
+          maximum: 600000
+          description: Milliseconds from `mousedown` to `mouseup` on the checkbox.
+        mouseMovements:
+          type: integer
+          minimum: 0
+          description: Count of distinct `mousemove` samples with non-zero delta.
+        keyboardInteractions:
+          type: integer
+          minimum: 0
+          description: Count of `keydown` events on the document.
+        isBot:
+          type: boolean
+          description: |
+            Set by the widget if any of the three honeypots was triggered
+            (hidden field filled, hidden link clicked, hidden checkbox checked).
+
+    ChallengeVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, nonce, hash, bits, signals, fingerprintHash]
+      properties:
+        challengeId:  { type: string }
+        nonce:        { type: string, minLength: 64, maxLength: 64 }
+        hash:
+          type: string
+          minLength: 64
+          maxLength: 64
+          description: |
+            The 64-character hex string the widget found by brute force.
+            The server validates by computing
+            `sha256( concat(utf8("<challengeId>:<nonce>"), hexDecode(hash)) )`
+            and asserting at least `bits` leading-zero bits.
+        bits:         { type: integer, minimum: 0, maximum: 64 }
+        signals:      { $ref: '#/components/schemas/SignalsV1' }
+        fingerprintHash:
+          type: string
+          minLength: 1
+          maxLength: 128
+
+    ChallengeVerifySuccess:
+      type: object
+      additionalProperties: false
+      required: [status, token, expiresAt, failOpen]
+      properties:
+        status: { type: string, const: success }
+        token:
+          type: string
+          description: |
+            Opaque HMAC token, format
+            `base64url(payload).base64url(hmacSha256(payload))`.
+            Payload fields (all integer Unix seconds where applicable):
+            `{id, siteId, ip, fph, kind:"verify", iat, exp}`.
+            `iat` is used server-side for `iat < revokedAt` bulk-revocation
+            checks.
+          examples: ["eyJpZCI6ImFhYWFhLi4uIn0.xN5pJ5yG8p2X3vKz0eR5z5p2O5w1bF4u6Vv8mYxQ7zA"]
+        expiresAt: { type: string, format: date-time }
+        failOpen:
+          type: boolean
+          const: false
+          description: Always `false` on this variant. Discriminates success from fail-open.
+
+    ChallengeVerifyBypass:
+      type: object
+      additionalProperties: false
+      required: [status, token, expiresAt, failOpen]
+      properties:
+        status: { type: string, const: bypass }
+        token:
+          type: string
+          description: |
+            Bypass HMAC token. Same format as `success`, but with
+            `kind:"bypass"` and `exp` typically 24h ahead. Payload:
+            `{id, siteId, ip, fph, kind:"bypass", iat, exp}`.
+            `nwCompanyId` is NOT in the payload — entitlement is checked
+            at mint time only.
+        expiresAt: { type: string, format: date-time }
+        failOpen:
+          type: boolean
+          const: false
+          description: Always `false` on this variant. Discriminates bypass from fail-open.
+
+    ChallengeVerifyFailOpen:
+      type: object
+      additionalProperties: false
+      required: [status, failOpen]
+      description: |
+        Behavior-locked fail-open response. Returned on internal server
+        error with `200 OK`. The widget MUST treat this as a successful,
+        short-lived outcome and never as a refusal.
+
+        In the current implementation the body is the truly minimal
+        envelope `{ status: "success", failOpen: true }` with neither
+        `token` nor `expiresAt` populated. Both are modeled as optional
+        here so the spec does not break client-side validators, and to
+        leave room for a future enhancement that mints a synthetic
+        short-lived token.
+      properties:
+        status: { type: string, const: success }
+        failOpen: { type: boolean, const: true }
+        expiresAt:
+          type: string
+          format: date-time
+          description: |
+            Suggested expiry. When absent (current behavior), the widget
+            MUST apply a local default of 5 minutes from the moment of
+            receive.
+          nullable: true
+        token:
+          type: string
+          description: |
+            Optional short-lived synthetic token the consumer server can
+            validate via `/api/v1/token/verify`. When absent, the widget
+            still exposes the `success` outcome but cannot forward a
+            token to the consumer server — the consumer must treat the
+            fail-open as a soft-OK.
+
+    TokenVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token: { type: string, minLength: 1, maxLength: 1024 }
+
+    TokenVerifySuccess:
+      type: object
+      additionalProperties: false
+      required: [ok, siteId, principal, bypass]
+      properties:
+        ok: { type: boolean, const: true }
+        siteId:
+          type: integer
+          description: Server-side captcha site id (integer primary key).
+        principal:
+          type: object
+          additionalProperties: false
+          required: [ip, fingerprintHash]
+          properties:
+            ip: { type: string, examples: ["203.0.113.42"] }
+            fingerprintHash: { type: string }
+        bypass:
+          type: boolean
+          description: True if the token was a `kind:"bypass"` token.
+
+    WellKnown:
+      type: object
+      additionalProperties: false
+      required: [service, version, endpoint, fingerprint]
+      properties:
+        service:     { type: string, const: nexwinds-captcha }
+        version:     { type: string, examples: ["1.0.0"] }
+        endpoint:    { type: string, format: uri }
+        fingerprint:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+          description: |
+            Public service fingerprint. Widgets can pin against this in
+            strict mode to detect SaaS rotation.
+
+    Problem:
+      type: object
+      description: RFC 7807 problem details document.
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type:     { type: string, format: uri }
+        title:    { type: string }
+        status:   { type: integer, minimum: 100, maximum: 599 }
+        detail:   { type: string }
+        instance: { type: string }
+
+# ----------------------------------------------------------------------------
+# Notes for the implementer (do not render to clients)
+# ----------------------------------------------------------------------------
+x-nexwinds-internal:
+  api-version: 1.0.0
+  spec-frozen-at: 2026-06-19
+  spec-revision: 2
+  revision-history:
+    - revision: 1
+      date: 2026-06-19
+      summary: "Initial spec (557 lines). Source of truth: CLARIFY_NEXCOOKIE.md."
+    - revision: 2
+      date: 2026-06-19
+      summary: |
+        Resolved 5 discrepancies from OPENAPI_ALIGNMENT_DM.md. Added
+        `iat` to bypass & verify token payloads (Unix seconds). Locked
+        revocation rule to `iat < revokedAt`. Made `expiresAt` and
+        `token` optional on the fail-open variant. Standardized problem
+        URIs to nexcookie.com. Updated servers to nexcookie.com.
+        Corrected rate-limit description to IP+fingerprintHash bucket.
+        Deferred RL_IP/RL_FP/RL_KEY env-var limits to v1.1.
+      files-cross-referenced:
+        - OPENAPI_ALIGNMENT_DM.md
+        - OPENAPI_ALIGNMENT_REPLY.md
+        - OPENAPI_ALIGNMENT_RESPONSE.md
+        - OPENAPI_ALIGNMENT_RESOLVED.md
+  source-of-truth:
+    - IMPLEMENT_NEXCOOKIE.md
+    - CLARIFY_NEXCOOKIE.md
+  open-items-for-v1.1:
+    - X-RateLimit-Limit / X-RateLimit-Remaining / X-RateLimit-Reset headers
+    - Retry-After header on 429
+    - structured nextBits field on 403 instead of free-text detail
+    - i18n / Accept-Language negotiation
+    - signed webhooks
+    - persistent IP/FP banning
+    - per-IP-only / per-FP-only / per-key rate-limit caps (RL_IP, RL_FP, RL_KEY env vars)
+    - minting a synthetic short-lived token on the fail-open path
+  notes:
+    - "PoW input format is exactly: payload = '<challengeId>:<nonce>', combined = concat(utf8(payload), hexDecode(clientHash)), digest = sha256(combined)."
+    - "Verify token payload: {id, siteId, ip, fph, kind:'verify', iat, exp}. iat and exp are integer Unix seconds."
+    - "Bypass token payload: {id, siteId, ip, fph, kind:'bypass', iat, exp}. iat and exp are integer Unix seconds. There is no `v`, no `sub`, no `nwCompanyId`."
+    - "Bulk revocation rule: server rejects when `payload.iat < revokedAt` (strict less-than). Tokens with iat == revokedAt are honored. Redis key: nxw:cap:revocation:<domainId> stores the revocation timestamp."
+    - "Token TTLs: success = 300s, bypass = 86400s. nwCompanyId is server-only and never appears on the wire."
+    - "Rate limit: only POST /api/v1/challenge/verify is counted. Bucket key is `${ip}:${fingerprintHash}`. Default 10 hits / 20 min."
+    - "Fail-open envelope in current implementation: truly minimal `{status:'success', failOpen:true}` — no token, no expiresAt. The spec models both as optional to leave room for the future enhancement."
+    - "Challenge replay: 120s TTL, deleted on successful verify (verify/route.ts#L133)."
+    - "There are no widget-side server tests; widget's test suite is the only line of defense."
+    - "Fail-open discriminator: the 3-way oneOf splits on `status` + `failOpen` together. `status:'success'` AND `failOpen:false` → Success. `status:'bypass'` AND `failOpen:false` → Bypass. `status:'success'` AND `failOpen:true` → FailOpen."

@@ -1,0 +1,81 @@
+{
+  "name": "@nexwinds/captcha",
+  "version": "0.1.0",
+  "description": "Self-hosted, privacy-first, neutral-UX captcha widget. Talks to the NexWinds captcha SaaS.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./styles": "./dist/components/Captcha.css.module.css",
+    "./contracts/openapi.yaml": "./contracts/openapi.yaml"
+  },
+  "files": [
+    "dist",
+    "contracts",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.6.2"
+  },
+  "devDependencies": {
+    "@axe-core/react": "^4.9.0",
+    "@storybook/react": "^8.6.18",
+    "@storybook/react-vite": "^8.6.18",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.12.7",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "axe-core": "^4.9.0",
+    "happy-dom": "^14.10.0",
+    "msw": "^2.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "storybook": "^8.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "captcha",
+    "nexwinds",
+    "react",
+    "nextjs",
+    "self-hosted",
+    "privacy",
+    "accessibility",
+    "a11y",
+    "proof-of-work",
+    "spam-protection"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

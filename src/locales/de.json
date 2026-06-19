@@ -1,0 +1,12 @@
+{
+  "label": "Ich bin ein Mensch",
+  "verifying": "Wird überprüft…",
+  "success": "Verifiziert",
+  "bypass": "Verifiziert (Bypass-Berechtigung)",
+  "warning": "Die Überprüfung dauert etwas länger als gewöhnlich…",
+  "error": "Überprüfung fehlgeschlagen. Bitte erneut versuchen.",
+  "retry": "Erneut versuchen",
+  "expired": "Überprüfung abgelaufen. Bitte erneut verifizieren.",
+  "rate_limited": "Zu viele Versuche. Bitte einen Moment warten und erneut versuchen.",
+  "fail_open": "Überprüfung übersprungen (Dienst nicht verfügbar)."
+}
