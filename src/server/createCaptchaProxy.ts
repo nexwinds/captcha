@@ -1,3 +1,5 @@
+import { DEFAULT_PROXY_MOUNT } from '../lib/constants.js'
+
 /**
  * `createCaptchaProxy` — drop-in Next.js Route Handler factory.
  *
@@ -18,7 +20,8 @@
  *   - Any standard Web server
  */
 
-import { DEFAULT_ENDPOINT, DEFAULT_PROXY_MOUNT } from '../lib/constants.js'
+/** The SaaS source of truth. */
+const NEXWINDS_SAAS_URL = 'https://nexcookie.com/api/v1'
 
 export interface CaptchaProxyOptions {
   /**
@@ -36,7 +39,7 @@ export interface CaptchaProxyOptions {
   allowedOrigins?: string[] | '*'
   /** Upstream fetch timeout in ms. Defaults to 10000. */
   timeoutMs?: number
-  /** SaaS endpoint override. Defaults to DEFAULT_ENDPOINT. */
+  /** SaaS endpoint override. Defaults to 'https://nexcookie.com/api/v1'. */
   endpoint?: string
   /**
    * Optional hook to mutate the upstream request before it leaves your server.
@@ -59,7 +62,11 @@ function resolveOriginPolicy(
   requestOrigin: string,
   allowed: string[] | '*',
 ): string | null {
-  if (allowed === '*') return requestOrigin || '*'
+  if (allowed === '*') {
+    // Since we use credentials: 'include', we MUST echo the origin
+    // rather than returning '*'.
+    return requestOrigin || null
+  }
   if (allowed.includes(requestOrigin)) return requestOrigin
   return null
 }
@@ -121,7 +128,7 @@ function stripMount(pathname: string, mount: string): string {
 export function createCaptchaProxy(
   options: CaptchaProxyOptions = {},
 ): CaptchaProxyHandlers {
-  const endpoint = options.endpoint ?? DEFAULT_ENDPOINT
+  const endpoint = options.endpoint ?? NEXWINDS_SAAS_URL
   const mount = options.mountPath ?? DEFAULT_PROXY_MOUNT
   const allowed = options.allowedOrigins ?? '*'
   const timeoutMs = options.timeoutMs ?? 10_000

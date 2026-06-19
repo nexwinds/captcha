@@ -31,12 +31,15 @@ import {
   CaptchaTimeoutError,
   type FetchOptions,
 } from '../lib/http.js'
-import { DEFAULT_ENDPOINT, HTTP_TIMEOUT_MS } from '../lib/constants.js'
+import { HTTP_TIMEOUT_MS } from '../lib/constants.js'
 import type {
   CreateServerClientOptions,
   VerifyTokenOptions,
   VerifyTokenResult,
 } from '../types.js'
+
+/** The SaaS source of truth. */
+const NEXWINDS_SAAS_URL = 'https://nexcookie.com/api/v1'
 
 export class NexWindsServerClient {
   private readonly secretKey: string
@@ -45,7 +48,7 @@ export class NexWindsServerClient {
 
   constructor(opts: CreateServerClientOptions) {
     this.secretKey = opts.secretKey
-    this.endpoint = opts.endpoint ?? DEFAULT_ENDPOINT
+    this.endpoint = opts.endpoint ?? NEXWINDS_SAAS_URL
     this.fetchImpl = opts.fetch ?? globalThis.fetch
   }
 

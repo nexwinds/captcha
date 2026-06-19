@@ -3,9 +3,8 @@
 A self-hosted, privacy-first, neutral-UX captcha widget for React and Next.js.
 
 The widget talks to the **NexWinds captcha SaaS** (currently hosted inside
-[Nexcookie](https://nexcookie.com)) and exposes a single-click "I am human"
-flow with no third-party services, no analytics, no cookies, and no
-fingerprinting beyond a stable, user-resettable hash.
+[Nexcookie](https://nexcookie.com)) via a **local proxy** in your application. 
+This ensures zero third-party cookies, no CORS issues, and a cleaner network profile.
 
 > **No reCAPTCHA. No hCaptcha. No Turnstile. No cookies set by this library.**
 
@@ -14,30 +13,56 @@ fingerprinting beyond a stable, user-resettable hash.
 ## What you get
 
 - A drop-in `<Captcha />` component with a "I am human" checkbox.
-- 5-field behavioral signals (dwell, click-hold, mouse, keyboard, honeypot) sent to the SaaS.
+- CORS-free integration: browser only talks to your own domain.
+- 5-field behavioral signals (dwell, click-hold, mouse, keyboard, honeypot).
 - Web Crypto SHA-256 proof-of-work (chunked, never blocks the main thread).
 - Honeypots: hidden field, hidden link, hidden checkbox — all `aria-hidden` and `tabindex={-1}`.
-- Hourly-stable fingerprint hash stored in `localStorage` (resettable by the user).
-- Locale fallback chain: `requested → en`. 8 locales shipped: `en, pt, es, fr, de, ja, zh, ar`.
-- `prefers-reduced-motion` respected; the spinner is replaced by a static dot.
-- WCAG 2.2 AA: `role="status"`, `aria-live="polite"`, full keyboard support, visible focus ring.
-- Server helper `@nexwinds/captcha/server` for the consumer's Next.js route handlers.
+- WCAG 2.2 AA: `role="status"`, `aria-live="polite"`, full keyboard support.
 
 ---
 
 ## Install
 
 ```bash
-pnpm add @nexwinds/captcha
-# or
 npm install @nexwinds/captcha
 ```
 
-React 18+ and Next.js 13+ (App Router) are supported as peer dependencies.
-
 ---
 
-## Usage
+## Setup
+
+### 1. The Proxy (Required)
+
+To avoid CORS issues and keep user data on your origin, you MUST mount a proxy. In Next.js App Router:
+
+```ts
+// app/api/captcha/[...path]/route.ts
+import { createCaptchaProxy } from '@nexwinds/captcha/server'
+
+const proxy = createCaptchaProxy()
+
+export async function GET(req: Request) { return proxy.GET(req) }
+export async function POST(req: Request) { return proxy.POST(req) }
+export async function OPTIONS(req: Request) { return proxy.OPTIONS(req) }
+```
+
+### 2. The Provider
+
+Wrap your app with the provider. It defaults to the `/api/captcha` endpoint.
+
+```tsx
+import { CaptchaProvider } from '@nexwinds/captcha'
+
+export default function Layout({ children }) {
+  return (
+    <CaptchaProvider siteKey={process.env.NEXT_PUBLIC_NEXWINDS_SITE_KEY!}>
+      {children}
+    </CaptchaProvider>
+  )
+}
+```
+
+### 3. Usage
 
 ```tsx
 'use client'
@@ -50,11 +75,7 @@ export default function Form() {
 
   return (
     <form action="/api/submit" method="POST">
-      {/* ... your fields ... */}
-      <Captcha
-        siteKey={process.env.NEXT_PUBLIC_NEXWINDS_SITE_KEY!}
-        onSuccess={(token) => setToken(token)}
-      />
+      <Captcha onSuccess={(token) => setToken(token)} />
       <input type="hidden" name="captcha_token" value={token ?? ''} />
       <button type="submit" disabled={!token}>Send</button>
     </form>
@@ -62,30 +83,7 @@ export default function Form() {
 }
 ```
 
-### Provider (optional & Smart Discovery)
-
-The `CaptchaProvider` can handle global configuration and **auto-discover** your proxy endpoint to avoid CORS issues.
-
-```tsx
-import { CaptchaProvider, Captcha } from '@nexwinds/captcha'
-
-export default function Page() {
-  return (
-    <CaptchaProvider
-      siteKey={process.env.NEXT_PUBLIC_NEXWINDS_SITE_KEY!}
-      autoDiscover={true}
-      locale="pt"
-      theme="auto"
-    >
-      <Captcha onSuccess={(token) => console.log('Solved!', token)} />
-    </CaptchaProvider>
-  )
-}
-```
-
-### Server-side token verification
-
-In your Next.js route handler, after the user submits the form:
+### 4. Server-side Verification
 
 ```ts
 // app/api/submit/route.ts
@@ -97,62 +95,29 @@ const nxw = createServerClient({
 })
 
 export async function POST(req: Request) {
-  const { token, ...rest } = await req.json()
+  const { token } = await req.json()
   const ip = (await headers()).get('x-forwarded-for') ?? undefined
 
   const result = await nxw.verifyToken(token, { ip })
-  if (!result.ok) {
-    return Response.json({ error: result.reason }, { status: 403 })
-  }
+  if (!result.ok) return Response.json({ error: result.reason }, { status: 403 })
 
-  // proceed with the rest of the request...
   return Response.json({ ok: true })
 }
 ```
-
-The server helper is a thin HTTPS client — **no local HMAC verification**.
-The SaaS is the only entity that can verify a token; the secret key is
-never sent to the widget.
-
-### One-line browser→SaaS proxy (recommended for Next.js / Workers)
-
-The widget calls the SaaS over HTTPS. If your app's origin differs from
-the SaaS origin, the browser enforces CORS. Ship this single route
-handler so the browser talks only to your own origin:
-
-```ts
-// app/api/captcha/[...path]/route.ts
-import { createCaptchaProxy } from '@nexwinds/captcha/server'
-
-// Explicit re-export — Next.js / SWC reliably emit three named exports
-// this way. `export const { GET, POST, OPTIONS } = …` also works, but
-// some bundler configs collapse it into a single binding and you get
-// 405 Method Not Allowed on POST.
-const proxy = createCaptchaProxy()
-export const GET = proxy.GET
-export const POST = proxy.POST
-export const OPTIONS = proxy.OPTIONS
-```
-
-That's the entire integration. The widget talks to `/api/captcha/*`
-(same-origin, no CORS, no CSP tweak for `nexcookie.com`); the proxy
-forwards to the SaaS server-to-server.
 
 If you got a 405 on `POST /api/captcha/challenge/issue`, the route is
 matching but the POST handler isn't being exported. Restart the dev
 server after creating the file, or compare your file against the
 template above.
 
-```tsx
-<Captcha publishableKey={...} onVerify={...} />
-```
+### Manual Configuration
 
-Or, if you'd rather not set `publishableKey` per-widget, set it once at the
+If you'd rather not use `siteKey` per-widget, set it once at the
 provider level:
 
 ```tsx
-<CaptchaProvider publishableKey={...}>
-  <Captcha onVerify={...} />
+<CaptchaProvider siteKey={...}>
+  <Captcha onSuccess={...} />
 </CaptchaProvider>
 ```
 
@@ -169,9 +134,9 @@ import { createCaptchaProxy } from '@nexwinds/captcha/server'
 const proxy = createCaptchaProxy({
   allowedOrigins: ['https://your-app.com', 'https://www.your-app.com'],
 })
-export const GET = proxy.GET
-export const POST = proxy.POST
-export const OPTIONS = proxy.OPTIONS
+export async function GET(req: Request) { return proxy.GET(req) }
+export async function POST(req: Request) { return proxy.POST(req) }
+export async function OPTIONS(req: Request) { return proxy.OPTIONS(req) }
 ```
 
 Origins outside the list get `403`-equivalent preflight responses (no

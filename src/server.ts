@@ -37,4 +37,4 @@ export type {
   TokenVerifyPrincipal,
   Problem,
 } from './types.js'
-export { DEFAULT_ENDPOINT, DEFAULT_PROXY_MOUNT } from './lib/constants.js'
+export { DEFAULT_PROXY_MOUNT } from './lib/constants.js'

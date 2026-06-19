@@ -44,7 +44,6 @@ export {
 export type { FetchOptions } from './lib/http.js'
 
 export {
-  DEFAULT_ENDPOINT,
   FALLBACK_CALIBRATION,
   HTTP_TIMEOUT_MS,
   MAX_POW_BITS,
@@ -52,6 +51,7 @@ export {
   BRAND_NAME,
   BRAND_URL,
   PRIVACY_URL,
+  DEFAULT_PROXY_MOUNT,
 } from './lib/constants.js'
 
 export { solve, verifyLocallyAsync } from './lib/pow.js'

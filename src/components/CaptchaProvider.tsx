@@ -3,9 +3,9 @@
  * locale, and theme across multiple captcha instances.
  */
 
-import { createContext, useContext, useMemo, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { CaptchaContextValue, Locale } from '../types.js'
-import { DEFAULT_ENDPOINT, DEFAULT_PROXY_MOUNT } from '../lib/constants.js'
+import { DEFAULT_PROXY_MOUNT } from '../lib/constants.js'
 
 const CaptchaContext = createContext<CaptchaContextValue | null>(null)
 
@@ -16,46 +16,16 @@ export interface CaptchaProviderProps {
   siteKey?: string
   locale?: Locale
   theme?: 'auto' | 'light' | 'dark'
-  endpoint?: string
   /** 
-   * Enable auto-discovery of the proxy endpoint. 
-   * If true, tries to hit `/api/captcha` before falling back to SaaS.
+   * SaaS endpoint override. 
+   * Defaults to '/api/captcha'.
    */
-  autoDiscover?: boolean
+  endpoint?: string
   children: ReactNode
 }
 
 export function CaptchaProvider(props: CaptchaProviderProps) {
-  const [discoveredEndpoint, setDiscoveredEndpoint] = useState<string | null>(null)
-  const [isReady, setIsReady] = useState(!props.autoDiscover)
-
   const siteKey = props.siteKey ?? props.publishableKey ?? ''
-
-  useEffect(() => {
-    if (!props.autoDiscover) return
-
-    let cancelled = false
-    const checkProxy = async () => {
-      try {
-        const res = await fetch(`${DEFAULT_PROXY_MOUNT}/calibration`, { method: 'HEAD' })
-        if (!cancelled) {
-          if (res.ok) {
-            setDiscoveredEndpoint(DEFAULT_PROXY_MOUNT)
-          }
-          setIsReady(true)
-        }
-      } catch {
-        if (!cancelled) {
-          setIsReady(true)
-        }
-      }
-    }
-
-    void checkProxy()
-    return () => {
-      cancelled = true
-    }
-  }, [props.autoDiscover])
 
   const value = useMemo<CaptchaContextValue>(
     () => ({
@@ -63,10 +33,10 @@ export function CaptchaProvider(props: CaptchaProviderProps) {
       siteKey,
       locale: (props.locale ?? 'en') as Locale,
       theme: props.theme ?? 'auto',
-      endpoint: props.endpoint ?? discoveredEndpoint ?? DEFAULT_ENDPOINT,
-      isReady,
+      endpoint: props.endpoint ?? DEFAULT_PROXY_MOUNT,
+      isReady: true,
     }),
-    [siteKey, props.locale, props.theme, props.endpoint, discoveredEndpoint, isReady],
+    [siteKey, props.locale, props.theme, props.endpoint],
   )
   return <CaptchaContext.Provider value={value}>{props.children}</CaptchaContext.Provider>
 }

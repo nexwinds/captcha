@@ -21,7 +21,7 @@ import { useFingerprint } from '../hooks/useFingerprint.js'
 import { useHoneypot } from '../hooks/useHoneypot.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { useCaptchaContext } from './CaptchaProvider.js'
-import { BRAND_NAME, BRAND_URL, DEFAULT_ENDPOINT, PRIVACY_URL } from '../lib/constants.js'
+import { BRAND_NAME, BRAND_URL, PRIVACY_URL } from '../lib/constants.js'
 import type { CaptchaProps, VerifyOutcome } from '../types.js'
 import styles from './Captcha.module.css'
 

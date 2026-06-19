@@ -48,10 +48,10 @@ describe('createCaptchaProxy', () => {
     expect(res.headers.get('Vary')).toBe('Origin')
   })
 
-  it('OPTIONS returns * when no origin header and allowedOrigins is *', async () => {
+  it('OPTIONS returns null when no origin header and allowedOrigins is *', async () => {
     const h = createCaptchaProxy({ mountPath: '/api/captcha' })
     const res = await h.OPTIONS(req('/api/captcha/calibration'))
-    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
   })
 
   it('OPTIONS echoes origin when allow-list matches', async () => {

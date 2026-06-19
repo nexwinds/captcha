@@ -1,14 +1,10 @@
 /**
  * Constants matching the locked wire contract.
- *
- * DEFAULT_ENDPOINT is the production SaaS URL (CLARIFY §A5.2).
  */
 
-export const DEFAULT_ENDPOINT = 'https://nexcookie.com/api/v1'
-export const DEFAULT_FALLBACK_LOCALE = 'en' as const
-
-/** Path the consumer mounts the proxy under. The factory strips this prefix. */
+/** Path the consumer mounts the proxy under. This is the default endpoint. */
 export const DEFAULT_PROXY_MOUNT = '/api/captcha'
+export const DEFAULT_FALLBACK_LOCALE = 'en' as const
 
 /** Reasonable time budget for a single HTTP call to the SaaS. */
 export const HTTP_TIMEOUT_MS = 10_000
