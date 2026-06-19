@@ -240,10 +240,6 @@ export async function handleCaptchaProxyRequest(
 export function createCaptchaProxy(
   options: CaptchaProxyOptions = {},
 ): CaptchaProxyHandlers {
-  if (options.debug) {
-    console.log(`[nexwinds/proxy] factory initialized (mount: ${options.mountPath ?? DEFAULT_PROXY_MOUNT})`)
-  }
-
   const proxy = ((req: Request) => handleCaptchaProxyRequest(req, options)) as CaptchaProxyHandlers
   proxy.GET = proxy
   proxy.POST = proxy

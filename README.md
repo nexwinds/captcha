@@ -33,23 +33,37 @@ npm install @nexwinds/captcha
 
 ### 1. The Proxy (Required)
 
-To avoid CORS issues and keep user data on your origin, you MUST mount a proxy. In Next.js App Router:
+To avoid CORS issues and keep user data on your origin, you MUST mount a proxy.
+
+#### Option A: Next.js Rewrites (Zero-Code / Recommended)
+
+This is the most reliable and efficient way for Next.js. It's handled at the infrastructure level, meaning no code to maintain and zero 405/CORS errors.
+
+```ts
+// next.config.ts or next.config.js
+const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/api/captcha/:path*',
+        destination: 'https://nexcookie.com/api/v1/:path*',
+      },
+    ]
+  },
+}
+```
+
+#### Option B: Route Handlers (Custom Logic)
+
+Use this if you need to transform the request (e.g., adding internal headers) or if you are not using Next.js (e.g., Cloudflare Workers).
 
 ```ts
 // app/api/captcha/[...path]/route.ts
 import { handleCaptchaProxyRequest } from '@nexwinds/captcha/server'
 
-// The most reliable way for Next.js 15+: 
-// A stateless handler that is guaranteed to be detected as an export.
 export const GET = (req: Request) => handleCaptchaProxyRequest(req)
 export const POST = (req: Request) => handleCaptchaProxyRequest(req)
 export const OPTIONS = (req: Request) => handleCaptchaProxyRequest(req)
-```
-
-If you prefer the factory pattern:
-```ts
-import { createCaptchaProxy } from '@nexwinds/captcha/server'
-export const { GET, POST, OPTIONS } = createCaptchaProxy({ debug: true })
 ```
 
 ### Troubleshooting 405 Errors
