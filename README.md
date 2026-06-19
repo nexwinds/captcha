@@ -156,6 +156,71 @@ and the widget treats it as a soft-OK.
 
 ---
 
+## Deployment: CORS, CSP, and environment variables
+
+### CORS
+
+The widget calls the SaaS directly from the browser. If your app and the
+SaaS live on different origins, the SaaS must respond with CORS headers
+on every `/api/v1/*` endpoint:
+
+```http
+Access-Control-Allow-Origin: https://your-app.com
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type
+Access-Control-Max-Age: 86400
+Vary: Origin
+```
+
+`Authorization` and `Content-Type: application/json` require an explicit
+origin — `*` is rejected by browsers. Echo `Origin` from an allow-list;
+do not reflect arbitrary values. `OPTIONS` preflight must return
+`204 No Content` with the same headers.
+
+If the SaaS isn't CORS-enabled yet, point the widget at a same-origin
+proxy in your app and pass `endpoint="/api/captcha"` (or any path that
+forwards to the SaaS). The SDK has no other way around CORS — it's a
+browser-enforced boundary.
+
+### CSP
+
+Minimum directives for a hosted deployment:
+
+```http
+Content-Security-Policy:
+  default-src 'self';
+  connect-src 'self' https://nexcookie.com https://api.nexwinds.com;
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  frame-ancestors 'none';
+  base-uri 'self';
+```
+
+- `connect-src` must include the SaaS origin (or your proxy origin).
+- `style-src 'unsafe-inline'` is required because the widget sets inline
+  `style` attributes for the spinner transform.
+- `script-src 'self'` — the widget ships no inline scripts; it loads as
+  an ES module from your bundle.
+- `frame-ancestors 'none'` — the widget must never be iframed by
+  third parties; serve it top-level only.
+
+### Environment variables
+
+| Variable                              | Scope        | Required | Notes                                         |
+|---------------------------------------|--------------|----------|-----------------------------------------------|
+| `NEXT_PUBLIC_NEXWINDS_PUBLISHABLE_KEY` | client       | yes      | `pk_live_<hex>` from the dashboard.           |
+| `NEXWINDS_SECRET_KEY`                  | server only  | yes      | `sk_live_<hex>`. Used by `createServerClient`. |
+| `NEXWINDS_ENDPOINT`                    | server only  | no       | Overrides the SaaS URL for the server client.  |
+
+The `NEXT_PUBLIC_` prefix is a Next.js convention that inlines a variable
+into client bundles; the secret key must **not** have that prefix so it
+gets tree-shaken from the browser bundle. The widget itself never sees
+the secret key, and the server client never sees the publishable key
+beyond what it forwards in the `Authorization` header.
+
+---
+
 ## Customization
 
 ```tsx
