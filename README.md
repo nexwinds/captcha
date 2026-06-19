@@ -37,20 +37,19 @@ To avoid CORS issues and keep user data on your origin, you MUST mount a proxy. 
 
 ```ts
 // app/api/captcha/[...path]/route.ts
-import { createCaptchaProxy } from '@nexwinds/captcha/server'
+import { handleCaptchaProxyRequest } from '@nexwinds/captcha/server'
 
-export const { GET, POST, OPTIONS } = createCaptchaProxy({
-  allowedOrigins: ['https://yourdomain.com'], // or '*'
-  debug: process.env.NODE_ENV === 'development',
-})
+// The most reliable way for Next.js 15+: 
+// A stateless handler that is guaranteed to be detected as an export.
+export const GET = (req: Request) => handleCaptchaProxyRequest(req)
+export const POST = (req: Request) => handleCaptchaProxyRequest(req)
+export const OPTIONS = (req: Request) => handleCaptchaProxyRequest(req)
 ```
 
-*Note: If you encounter 405 errors in Next.js 16/Turbopack, use explicit exports:*
+If you prefer the factory pattern:
 ```ts
-const proxy = createCaptchaProxy()
-export const GET = proxy
-export const POST = proxy
-export const OPTIONS = proxy
+import { createCaptchaProxy } from '@nexwinds/captcha/server'
+export const { GET, POST, OPTIONS } = createCaptchaProxy({ debug: true })
 ```
 
 ### Troubleshooting 405 Errors

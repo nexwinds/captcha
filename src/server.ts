@@ -28,6 +28,7 @@ export {
 } from './server/createServerClient.js'
 export {
   createCaptchaProxy,
+  handleCaptchaProxyRequest,
 } from './server/createCaptchaProxy.js'
 export type {
   CaptchaProxyOptions,

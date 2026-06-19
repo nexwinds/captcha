@@ -1,25 +1,5 @@
 import { DEFAULT_PROXY_MOUNT } from '../lib/constants.js'
 
-/**
- * `createCaptchaProxy` — drop-in Next.js Route Handler factory.
- *
- * One file in the consumer's app wires CORS-free browser → SaaS:
- *
- *   // app/api/captcha/[...path]/route.ts
- *   import { createCaptchaProxy } from '@nexwinds/captcha/server'
- *   export const { GET, POST, OPTIONS } = createCaptchaProxy()
- *
- * That single file is the entire integration. The browser hits `/api/captcha/*`
- * (same origin, no CORS), and the proxy forwards to the SaaS endpoint with the
- * caller's `Authorization` header preserved.
- *
- * Runtime: Web Fetch API (Request/Response/fetch globals). Works in:
- *   - Next.js App Router (Node and Edge runtimes)
- *   - Cloudflare Workers
- *   - Deno / Bun
- *   - Any standard Web server
- */
-
 /** The SaaS source of truth. */
 const NEXWINDS_SAAS_URL = 'https://nexcookie.com/api/v1'
 
@@ -66,20 +46,12 @@ function resolveOriginPolicy(
   allowed: string[] | '*',
 ): string | null {
   if (allowed === '*') {
-    // Since we use credentials: 'include', we MUST echo the origin
-    // rather than returning '*'.
     return requestOrigin || null
   }
   if (allowed.includes(requestOrigin)) return requestOrigin
   return null
 }
 
-/**
- * Extract the request's origin. Prefers the standard `Origin` header set
- * by browsers; falls back to `X-Nxw-Origin` (a custom header used when
- * `Origin` is stripped — some test envs and serverless runtimes strip
- * forbidden header names from `Request` constructors), then `Referer`.
- */
 function readRequestOrigin(request: Request): string {
   const origin = request.headers.get('origin')
   if (origin) return origin
@@ -101,7 +73,7 @@ function corsHeaders(origin: string, allowed: string[] | '*'): HeadersInit {
   const headers: Record<string, string> = {
     Vary: 'Origin',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, content-type, x-nxw-site-key',
+    'Access-Control-Allow-Headers': 'authorization, content-type, x-nxw-site-key, x-nxw-origin',
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
     'Allow': 'GET, POST, OPTIONS',
@@ -120,20 +92,144 @@ function joinUrl(base: string, tail: string, query: string): string {
 
 function stripMount(pathname: string, mount: string): string {
   const m = mount.replace(/\/+$/, '')
-  // Ensure we are working with a clean path
   const p = pathname.replace(/\/+$/, '')
   
   if (p === m) return ''
   if (p.startsWith(`${m}/`)) return p.slice(m.length + 1)
   
-  // Fallback for Next.js 16 / Turbopack where the mount might be partial
-  // or the pathname might not start with the mount if rewrites are involved.
-  // We look for the common NexWinds paths as a last resort.
   if (p.includes('/challenge/issue')) return 'challenge/issue'
   if (p.includes('/challenge/verify')) return 'challenge/verify'
   if (p.includes('/calibration')) return 'calibration'
   
   return p.replace(/^\/+/, '')
+}
+
+/**
+ * The core proxy logic, extracted for maximum compatibility.
+ * Use this directly in your Route Handlers if the factory fails.
+ */
+export async function handleCaptchaProxyRequest(
+  request: Request,
+  options: CaptchaProxyOptions = {}
+): Promise<Response> {
+  const method = request.method.toUpperCase()
+  const debug = options.debug ?? (process.env.NODE_ENV === 'development')
+  
+  if (debug) {
+    console.log(`[nexwinds/proxy] HTTP ${method} invoked for ${request.url}`)
+  }
+
+  const endpoint = options.endpoint ?? NEXWINDS_SAAS_URL
+  const mount = options.mountPath ?? DEFAULT_PROXY_MOUNT
+  const allowed = options.allowedOrigins ?? '*'
+  const timeoutMs = options.timeoutMs ?? 10_000
+  const origin = readRequestOrigin(request)
+
+  if (method === 'OPTIONS') {
+    if (debug) console.log(`[nexwinds/proxy] handling OPTIONS preflight`)
+    return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) })
+  }
+
+  if (method !== 'GET' && method !== 'POST') {
+    console.warn(`[nexwinds/proxy] method ${method} not allowed for ${request.url}`)
+    return new Response('Method Not Allowed', { 
+      status: 405, 
+      headers: { 'Allow': 'GET, POST, OPTIONS' } 
+    })
+  }
+
+  let bodyText: string | undefined = undefined;
+  if (method === 'POST') {
+    try {
+      if (debug) console.log(`[nexwinds/proxy] reading POST body...`)
+      bodyText = await request.clone().text()
+      if (debug) console.log(`[nexwinds/proxy] POST body read success (${bodyText.length} bytes)`)
+    } catch (e) {
+      console.error(`[nexwinds/proxy] CRITICAL: Failed to read POST request body for ${request.url}:`, e)
+    }
+  }
+
+  const incomingUrl = new URL(request.url)
+  const tail = stripMount(incomingUrl.pathname, mount)
+  const target = joinUrl(endpoint, tail, incomingUrl.search)
+
+  if (debug) {
+    console.log(`[nexwinds/proxy] forwarding ${method} -> ${target}`)
+  }
+
+  const headers = new Headers()
+  const auth = request.headers.get('authorization')
+  if (auth) headers.set('authorization', auth)
+  
+  const userAgent = request.headers.get('user-agent')
+  if (userAgent) headers.set('user-agent', userAgent)
+
+  const accept = request.headers.get('accept')
+  if (accept) headers.set('accept', accept)
+
+  if (method === 'POST') {
+    headers.set('content-type', 'application/json')
+  }
+
+  let init: RequestInit = {
+    method,
+    headers,
+    body: bodyText,
+  }
+
+  if (options.beforeFetch) {
+    init = await options.beforeFetch({ url: target, init, request })
+  }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  init.signal = controller.signal
+
+  try {
+    const upstream = await fetch(target, init)
+    clearTimeout(timer)
+
+    if (debug && !upstream.ok) {
+      console.warn(`[nexwinds/proxy] upstream returned ${upstream.status} for ${target}`)
+    }
+
+    const out = new Response(upstream.body, { status: upstream.status })
+    const ct = upstream.headers.get('content-type')
+    if (ct) out.headers.set('content-type', ct)
+    
+    out.headers.set('x-nxw-upstream-status', String(upstream.status))
+
+    for (const [k, v] of Object.entries(corsHeaders(origin, allowed))) {
+      out.headers.set(k, v)
+    }
+    return out
+  } catch (e) {
+    clearTimeout(timer)
+    const isAbort = e instanceof Error && e.name === 'AbortError'
+    const status = isAbort ? 504 : 502
+    const title = isAbort ? 'Gateway Timeout' : 'Bad Gateway'
+    
+    if (debug) {
+      console.error(`[nexwinds/proxy] upstream fetch failed: ${target}`, e)
+    }
+
+    return new Response(
+      JSON.stringify({
+        type: 'about:blank',
+        title,
+        status,
+        detail: e instanceof Error ? e.message : 'upstream fetch failed',
+      }),
+      {
+        status,
+        headers: {
+          'content-type': 'application/problem+json',
+          'x-nxw-proxy-error': 'upstream_failure',
+          ...corsHeaders(origin, allowed),
+        },
+      },
+    )
+  }
 }
 
 /**
@@ -147,139 +243,11 @@ export function createCaptchaProxy(
   if (options.debug) {
     console.log(`[nexwinds/proxy] factory initialized (mount: ${options.mountPath ?? DEFAULT_PROXY_MOUNT})`)
   }
-  const endpoint = options.endpoint ?? NEXWINDS_SAAS_URL
-  const mount = options.mountPath ?? DEFAULT_PROXY_MOUNT
-  const allowed = options.allowedOrigins ?? '*'
-  const timeoutMs = options.timeoutMs ?? 10_000
 
-  async function handle(
-    request: Request,
-  ): Promise<Response> {
-    const method = request.method.toUpperCase()
-    if (options.debug) {
-      console.log(`[nexwinds/proxy] HTTP ${method} invoked for ${request.url}`)
-    }
-
-    const origin = readRequestOrigin(request)
-
-    if (method === 'OPTIONS') {
-      if (options.debug) console.log(`[nexwinds/proxy] handling OPTIONS preflight`)
-      return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) })
-    }
-
-    if (method !== 'GET' && method !== 'POST') {
-      if (options.debug) console.warn(`[nexwinds/proxy] method ${method} not allowed`)
-      return new Response('Method Not Allowed', { 
-        status: 405, 
-        headers: { 'Allow': 'GET, POST, OPTIONS' } 
-      })
-    }
-
-    // Safety check for body reading on POST
-    let bodyText: string | undefined = undefined;
-    if (method === 'POST') {
-      try {
-        if (options.debug) console.log(`[nexwinds/proxy] reading POST body...`)
-        // Clone the request to be safe with some runtimes that might 
-        // have already touched the body.
-        bodyText = await request.clone().text()
-        if (options.debug) console.log(`[nexwinds/proxy] POST body read success (${bodyText.length} bytes)`)
-      } catch (e) {
-        console.error(`[nexwinds/proxy] CRITICAL: Failed to read POST request body: ${e}`)
-      }
-    }
-    const incomingUrl = new URL(request.url)
-    const tail = stripMount(incomingUrl.pathname, mount)
-    const target = joinUrl(endpoint, tail, incomingUrl.search)
-
-    if (options.debug) {
-      console.log(`[nexwinds/proxy] forwarding ${method} -> ${target}`)
-    }
-
-    const headers = new Headers()
-    // Forward essential headers
-    const auth = request.headers.get('authorization')
-    if (auth) headers.set('authorization', auth)
-    
-    const userAgent = request.headers.get('user-agent')
-    if (userAgent) headers.set('user-agent', userAgent)
-
-    const accept = request.headers.get('accept')
-    if (accept) headers.set('accept', accept)
-
-    if (method === 'POST') {
-      headers.set('content-type', 'application/json')
-    }
-
-    let init: RequestInit = {
-      method,
-      headers,
-      body: bodyText,
-    }
-
-    if (options.beforeFetch) {
-      init = await options.beforeFetch({ url: target, init, request })
-    }
-
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
-    init.signal = controller.signal
-
-    let upstream: Response
-    try {
-      upstream = await fetch(target, init)
-    } catch (e) {
-      clearTimeout(timer)
-      const isAbort = e instanceof Error && e.name === 'AbortError'
-      const status = isAbort ? 504 : 502
-      const title = isAbort ? 'Gateway Timeout' : 'Bad Gateway'
-      
-      if (options.debug) {
-        console.error(`[nexwinds/proxy] upstream fetch failed: ${target}`, e)
-      }
-
-      return new Response(
-        JSON.stringify({
-          type: 'about:blank',
-          title,
-          status,
-          detail: e instanceof Error ? e.message : 'upstream fetch failed',
-        }),
-        {
-          status,
-          headers: {
-            'content-type': 'application/problem+json',
-            'x-nxw-proxy-error': 'upstream_failure',
-            ...corsHeaders(origin, allowed),
-          },
-        },
-      )
-    }
-    clearTimeout(timer)
-
-    if (options.debug && !upstream.ok) {
-      console.warn(`[nexwinds/proxy] upstream returned ${upstream.status} for ${target}`)
-    }
-
-    // Pass through the upstream body verbatim; only headers we own get rewritten.
-    const out = new Response(upstream.body, { status: upstream.status })
-    const ct = upstream.headers.get('content-type')
-    if (ct) out.headers.set('content-type', ct)
-    
-    // Add a marker to distinguish SaaS errors from Proxy errors
-    out.headers.set('x-nxw-upstream-status', String(upstream.status))
-
-    for (const [k, v] of Object.entries(corsHeaders(origin, allowed))) {
-      out.headers.set(k, v)
-    }
-    return out
-  }
-
-  // Attach named handlers for backward compatibility and explicit exports
-  const proxy = handle as CaptchaProxyHandlers
-  proxy.GET = (req) => handle(req)
-  proxy.POST = (req) => handle(req)
-  proxy.OPTIONS = (req) => handle(req)
+  const proxy = ((req: Request) => handleCaptchaProxyRequest(req, options)) as CaptchaProxyHandlers
+  proxy.GET = proxy
+  proxy.POST = proxy
+  proxy.OPTIONS = proxy
 
   return proxy
 }
