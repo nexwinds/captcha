@@ -24,3 +24,8 @@ export const MAX_POW_BITS = 28
 
 /** Default token TTL applied locally when the server omits `expiresAt` (fail-open path). */
 export const FAIL_OPEN_LOCAL_TTL_MS = 5 * 60 * 1000
+
+/** Brand identity shown on the widget. The brand text + the URL it links to. */
+export const BRAND_NAME = 'NEXWINDS'
+export const BRAND_URL = 'https://nexwinds.com'
+export const PRIVACY_URL = 'https://nexwinds.com/legal/privacy-policy'

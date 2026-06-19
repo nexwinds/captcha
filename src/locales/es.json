@@ -8,5 +8,6 @@
   "retry": "Reintentar",
   "expired": "La verificación expiró. Por favor verifica de nuevo.",
   "rate_limited": "Demasiados intentos. Por favor espera un momento e inténtalo de nuevo.",
-  "fail_open": "Verificación omitida (servicio no disponible)."
+  "fail_open": "Verificación omitida (servicio no disponible).",
+  "privacy": "Privacidad"
 }

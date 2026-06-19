@@ -98,6 +98,34 @@
   flex: 0 0 auto;
   text-align: right;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.04em;
+}
+
+.nxwBrandLink,
+.nxwPrivacyLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nxwBrandLink:hover,
+.nxwPrivacyLink:hover {
+  color: var(--nxw-fg);
+  text-decoration: underline;
+}
+
+.nxwBrandLink:focus-visible,
+.nxwPrivacyLink:focus-visible {
+  outline: 2px solid var(--nxw-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.nxwBrandSep {
+  opacity: 0.5;
+  user-select: none;
 }
 
 .nxwStatus {

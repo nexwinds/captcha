@@ -27,6 +27,7 @@ export type TranslationKey =
   | 'expired'
   | 'rate_limited'
   | 'fail_open'
+  | 'privacy'
 
 export type Translations = Record<TranslationKey, string>
 

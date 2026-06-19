@@ -8,5 +8,6 @@
   "retry": "Erneut versuchen",
   "expired": "Überprüfung abgelaufen. Bitte erneut verifizieren.",
   "rate_limited": "Zu viele Versuche. Bitte einen Moment warten und erneut versuchen.",
-  "fail_open": "Überprüfung übersprungen (Dienst nicht verfügbar)."
+  "fail_open": "Überprüfung übersprungen (Dienst nicht verfügbar).",
+  "privacy": "Datenschutz"
 }

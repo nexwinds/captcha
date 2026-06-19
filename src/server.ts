@@ -7,12 +7,26 @@
  *
  *   const nxw = createServerClient({ secretKey: process.env.NEXWINDS_SECRET_KEY! })
  *   const result = await nxw.verifyToken(token, { ip })
+ *
+ * For CORS-free browser integration, also export `createCaptchaProxy`:
+ *
+ *   // app/api/captcha/[...path]/route.ts
+ *   import { createCaptchaProxy } from '@nexwinds/captcha/server'
+ *   export const { GET, POST, OPTIONS } = createCaptchaProxy()
  */
 
 export {
   createServerClient,
   NexWindsServerClient,
 } from './server/createServerClient.js'
+export {
+  createCaptchaProxy,
+  DEFAULT_PROXY_MOUNT,
+} from './server/createCaptchaProxy.js'
+export type {
+  CaptchaProxyOptions,
+  CaptchaProxyHandlers,
+} from './server/createCaptchaProxy.js'
 export type {
   CreateServerClientOptions,
   VerifyTokenOptions,
@@ -24,3 +38,4 @@ export type {
   TokenVerifyPrincipal,
   Problem,
 } from './types.js'
+export { DEFAULT_ENDPOINT } from './lib/constants.js'

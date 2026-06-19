@@ -21,7 +21,7 @@ import { useFingerprint } from '../hooks/useFingerprint.js'
 import { useHoneypot } from '../hooks/useHoneypot.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { useCaptchaContext } from './CaptchaProvider.js'
-import { DEFAULT_ENDPOINT } from '../lib/constants.js'
+import { BRAND_NAME, BRAND_URL, DEFAULT_ENDPOINT, PRIVACY_URL } from '../lib/constants.js'
 import type { CaptchaProps, VerifyOutcome } from '../types.js'
 import styles from './Captcha.module.css'
 
@@ -150,8 +150,26 @@ export function Captcha(props: CaptchaProps) {
         >
           {checked ? t('success') : t('label')}
         </label>
-        <span className={styles.nxwBrand} aria-hidden="true">
-          NexWinds
+        <span className={styles.nxwBrand}>
+          <a
+            className={styles.nxwBrandLink}
+            href={BRAND_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {BRAND_NAME}
+          </a>
+          <span className={styles.nxwBrandSep} aria-hidden="true">
+            ·
+          </span>
+          <a
+            className={styles.nxwPrivacyLink}
+            href={PRIVACY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('privacy')}
+          </a>
         </span>
       </div>
 

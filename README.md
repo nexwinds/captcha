@@ -117,6 +117,62 @@ The server helper is a thin HTTPS client — **no local HMAC verification**.
 The SaaS is the only entity that can verify a token; the secret key is
 never sent to the widget.
 
+### One-line browser→SaaS proxy (recommended for Next.js / Workers)
+
+The widget calls the SaaS over HTTPS. If your app's origin differs from
+the SaaS origin, the browser enforces CORS. Ship this single route
+handler so the browser talks only to your own origin:
+
+```ts
+// app/api/captcha/[...path]/route.ts
+import { createCaptchaProxy } from '@nexwinds/captcha/server'
+export const { GET, POST, OPTIONS } = createCaptchaProxy()
+```
+
+That's the entire integration. The widget talks to `/api/captcha/*`
+(same-origin, no CORS, no CSP tweak for `nexcookie.com`); the proxy
+forwards to the SaaS server-to-server. With `endpoint` left at the
+default, the widget needs **no `endpoint` prop at all** — the proxy
+becomes the SaaS endpoint from the widget's perspective if you also set:
+
+```ts
+// app/api/captcha/[...path]/route.ts
+import { createCaptchaProxy } from '@nexwinds/captcha/server'
+export const { GET, POST, OPTIONS } = createCaptchaProxy({
+  mountPath: '/api/captcha',
+})
+```
+
+…and on the widget:
+
+```tsx
+<Captcha endpoint="/api/captcha" publishableKey={...} onVerify={...} />
+```
+
+Or, if you'd rather not set `endpoint` per-widget, set it once at the
+provider level:
+
+```tsx
+<CaptchaProvider endpoint="/api/captcha" publishableKey={...}>
+  <Captcha onVerify={...} />
+</CaptchaProvider>
+```
+
+#### Locking the proxy to your origins (production)
+
+The default `allowedOrigins: '*'` is convenient for development. In
+production, restrict to the origins you actually serve:
+
+```ts
+export const { GET, POST, OPTIONS } = createCaptchaProxy({
+  allowedOrigins: ['https://your-app.com', 'https://www.your-app.com'],
+  endpoint: process.env.NEXWINDS_ENDPOINT, // optional override
+})
+```
+
+Origins outside the list get `403`-equivalent preflight responses (no
+`Access-Control-Allow-Origin` set, so the browser blocks the call).
+
 ---
 
 ## What the SaaS does (hosted in Nexcookie)
@@ -197,7 +253,9 @@ Content-Security-Policy:
   base-uri 'self';
 ```
 
-- `connect-src` must include the SaaS origin (or your proxy origin).
+- `connect-src` must include the SaaS origin (or your proxy origin). If
+  you ship the one-line proxy above, `'self'` is sufficient — the
+  widget never makes a cross-origin request.
 - `style-src 'unsafe-inline'` is required because the widget sets inline
   `style` attributes for the spinner transform.
 - `script-src 'self'` — the widget ships no inline scripts; it loads as
@@ -248,6 +306,19 @@ CSS variables are exposed for theming. Override on a parent:
   --nxw-radius: 8px;
 }
 ```
+
+### Brand & privacy link
+
+The widget renders a small footer with two outbound links:
+
+- `NEXWINDS` → https://nexwinds.com
+- Privacy (i18n'd) → https://nexwinds.com/legal/privacy-policy
+
+Both open in a new tab with `rel="noopener noreferrer"`. The brand text
+and URLs are constants exported from `@nexwinds/captcha` as `BRAND_NAME`,
+`BRAND_URL`, and `PRIVACY_URL`; they are not currently overridable per
+widget. The privacy link text is localized via the `privacy` key in
+`src/locales/*.json`.
 
 ---
 

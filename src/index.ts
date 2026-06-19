@@ -49,6 +49,9 @@ export {
   HTTP_TIMEOUT_MS,
   MAX_POW_BITS,
   FAIL_OPEN_LOCAL_TTL_MS,
+  BRAND_NAME,
+  BRAND_URL,
+  PRIVACY_URL,
 } from './lib/constants.js'
 
 export { solve, verifyLocallyAsync } from './lib/pow.js'
