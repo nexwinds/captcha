@@ -53,13 +53,14 @@ export const POST = proxy
 export const OPTIONS = proxy
 ```
 
-### Troubleshooting Proxy Errors
+### Troubleshooting 405 Errors
 
-If you encounter `405 Method Not Allowed` or `502 Bad Gateway`:
+If you receive `405 Method Not Allowed` on `POST` requests and **no server logs** appear (even with `debug: true`):
 
-1. Enable `debug: true` in `createCaptchaProxy` to see the exact upstream URLs being called in your server logs.
-2. Check the `x-nxw-upstream-status` header in the browser's Network tab. If it's present, the error is coming from the SaaS, not the proxy.
-3. Check the `x-nxw-proxy-error` header. If it says `upstream_failure`, the proxy couldn't reach the SaaS (check your server's internet connection or firewall).
+1. **Explicit Exports**: Ensure you are using `export const POST = proxy` (or `export async function POST...`) in your `route.ts`.
+2. **Middleware**: Check if you have a `middleware.ts` that might be intercepting `POST` requests or consuming the request body before it reaches the route.
+3. **Turbopack Cache**: If using Next.js 15+, try restarting your dev server with `npm run dev -- --clean` or deleting the `.next` folder to clear the Turbopack cache.
+4. **Trailing Slashes**: Ensure your widget's `endpoint` configuration matches the proxy mount exactly (avoid mixing `/api/captcha` with `/api/captcha/`).
 
 ### 2. The Provider
 

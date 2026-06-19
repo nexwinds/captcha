@@ -101,9 +101,10 @@ function corsHeaders(origin: string, allowed: string[] | '*'): HeadersInit {
   const headers: Record<string, string> = {
     Vary: 'Origin',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, content-type',
+    'Access-Control-Allow-Headers': 'authorization, content-type, x-nxw-site-key',
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
+    'Allow': 'GET, POST, OPTIONS',
   }
   if (allowOrigin !== null) {
     headers['Access-Control-Allow-Origin'] = allowOrigin
@@ -156,16 +157,22 @@ export function createCaptchaProxy(
   ): Promise<Response> {
     const method = request.method.toUpperCase()
     if (options.debug) {
-      console.log(`[nexwinds/proxy] handling ${method} ${request.url}`)
+      console.log(`[nexwinds/proxy] HTTP ${method} invoked for ${request.url}`)
     }
 
+    const origin = readRequestOrigin(request)
+
     if (method === 'OPTIONS') {
-      const origin = readRequestOrigin(request)
+      if (options.debug) console.log(`[nexwinds/proxy] handling OPTIONS preflight`)
       return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) })
     }
 
     if (method !== 'GET' && method !== 'POST') {
-      return new Response('Method Not Allowed', { status: 405 })
+      if (options.debug) console.warn(`[nexwinds/proxy] method ${method} not allowed`)
+      return new Response('Method Not Allowed', { 
+        status: 405, 
+        headers: { 'Allow': 'GET, POST, OPTIONS' } 
+      })
     }
 
     // Safety check for body reading on POST
@@ -173,14 +180,14 @@ export function createCaptchaProxy(
     if (method === 'POST') {
       try {
         if (options.debug) console.log(`[nexwinds/proxy] reading POST body...`)
-        bodyText = await request.text()
+        // Clone the request to be safe with some runtimes that might 
+        // have already touched the body.
+        bodyText = await request.clone().text()
         if (options.debug) console.log(`[nexwinds/proxy] POST body read success (${bodyText.length} bytes)`)
       } catch (e) {
         console.error(`[nexwinds/proxy] CRITICAL: Failed to read POST request body: ${e}`)
       }
     }
-
-    const origin = readRequestOrigin(request)
     const incomingUrl = new URL(request.url)
     const tail = stripMount(incomingUrl.pathname, mount)
     const target = joinUrl(endpoint, tail, incomingUrl.search)
