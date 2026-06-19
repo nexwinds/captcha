@@ -126,24 +126,27 @@ handler so the browser talks only to your own origin:
 ```ts
 // app/api/captcha/[...path]/route.ts
 import { createCaptchaProxy } from '@nexwinds/captcha/server'
-export const { GET, POST, OPTIONS } = createCaptchaProxy()
+
+// Explicit re-export — Next.js / SWC reliably emit three named exports
+// this way. `export const { GET, POST, OPTIONS } = …` also works, but
+// some bundler configs collapse it into a single binding and you get
+// 405 Method Not Allowed on POST.
+const proxy = createCaptchaProxy()
+export const GET = proxy.GET
+export const POST = proxy.POST
+export const OPTIONS = proxy.OPTIONS
 ```
 
 That's the entire integration. The widget talks to `/api/captcha/*`
 (same-origin, no CORS, no CSP tweak for `nexcookie.com`); the proxy
 forwards to the SaaS server-to-server. With `endpoint` left at the
 default, the widget needs **no `endpoint` prop at all** — the proxy
-becomes the SaaS endpoint from the widget's perspective if you also set:
+becomes the SaaS endpoint from the widget's perspective.
 
-```ts
-// app/api/captcha/[...path]/route.ts
-import { createCaptchaProxy } from '@nexwinds/captcha/server'
-export const { GET, POST, OPTIONS } = createCaptchaProxy({
-  mountPath: '/api/captcha',
-})
-```
-
-…and on the widget:
+If you got a 405 on `POST /api/captcha/challenge/issue`, the route is
+matching but the POST handler isn't being exported. Restart the dev
+server after creating the file, or compare your file against the
+template above.
 
 ```tsx
 <Captcha endpoint="/api/captcha" publishableKey={...} onVerify={...} />
@@ -164,14 +167,49 @@ The default `allowedOrigins: '*'` is convenient for development. In
 production, restrict to the origins you actually serve:
 
 ```ts
-export const { GET, POST, OPTIONS } = createCaptchaProxy({
+import { createCaptchaProxy } from '@nexwinds/captcha/server'
+
+const proxy = createCaptchaProxy({
   allowedOrigins: ['https://your-app.com', 'https://www.your-app.com'],
   endpoint: process.env.NEXWINDS_ENDPOINT, // optional override
 })
+export const GET = proxy.GET
+export const POST = proxy.POST
+export const OPTIONS = proxy.OPTIONS
 ```
 
 Origins outside the list get `403`-equivalent preflight responses (no
 `Access-Control-Allow-Origin` set, so the browser blocks the call).
+
+#### Troubleshooting the proxy
+
+| Symptom | Likely cause |
+|---------|-------------|
+| `405 Method Not Allowed` on `POST /api/captcha/challenge/issue` | Route matches but `POST` isn't exported. Restart `next dev` after creating the file, or check you have all three exports: `GET`, `POST`, `OPTIONS`. |
+| `404 Not Found` on `/api/captcha/*` | The catch-all isn't at `app/api/captcha/[...path]/route.ts`. With App Router, you need the literal folder `[...path]` (with the three dots and square brackets), not just `route.ts` at `app/api/captcha/`. |
+| `CORS error: ... No 'Access-Control-Allow-Origin' header` from the proxy itself | You're hitting the proxy from a different origin than your app. Either set `allowedOrigins` to include it, or set `allowedOrigins: '*'` in dev. |
+| Proxy returns 502 with `Bad Gateway` | The upstream (`nexcookie.com` by default) is unreachable or returned a network error. Check the response body for details. |
+
+Quick diagnostic — verify each method is exported and reaches the SaaS:
+
+```bash
+curl -i https://your-app.com/api/captcha/calibration
+# expect: 200, JSON calibration table
+
+curl -i -X OPTIONS https://your-app.com/api/captcha/challenge/issue \
+  -H "Origin: https://your-app.com" \
+  -H "Access-Control-Request-Method: POST"
+# expect: 204, Access-Control-Allow-Origin: *, Access-Control-Allow-Methods: ..., POST
+
+curl -i -X POST https://your-app.com/api/captcha/challenge/issue \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer pk_live_xxx" \
+  -d '{"fingerprintHash":"fp"}'
+# expect: 200, JSON {challengeId, nonce, bits}
+```
+
+If any of those return 405/404 instead of the expected status, the
+proxy route isn't set up correctly.
 
 ---
 
