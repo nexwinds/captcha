@@ -150,6 +150,9 @@ export function createCaptchaProxy(
     request: Request,
     method: 'GET' | 'POST',
   ): Promise<Response> {
+    if (options.debug) {
+      console.log(`[nexwinds/proxy] entering handle: ${method} ${request.url}`)
+    }
     const origin = readRequestOrigin(request)
     const incomingUrl = new URL(request.url)
     const tail = stripMount(incomingUrl.pathname, mount)
@@ -246,12 +249,25 @@ export function createCaptchaProxy(
     return out
   }
 
+  async function GET(request: Request): Promise<Response> {
+    if (options.debug) console.log(`[nexwinds/proxy] GET invoked`)
+    return handle(request, 'GET')
+  }
+
+  async function POST(request: Request): Promise<Response> {
+    if (options.debug) console.log(`[nexwinds/proxy] POST invoked`)
+    return handle(request, 'POST')
+  }
+
+  async function OPTIONS(request: Request): Promise<Response> {
+    if (options.debug) console.log(`[nexwinds/proxy] OPTIONS invoked`)
+    const origin = readRequestOrigin(request)
+    return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) })
+  }
+
   return {
-    OPTIONS: async (request) => {
-      const origin = readRequestOrigin(request)
-      return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) })
-    },
-    GET: (request) => handle(request, 'GET'),
-    POST: (request) => handle(request, 'POST'),
+    GET,
+    POST,
+    OPTIONS,
   }
 }
