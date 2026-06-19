@@ -92,58 +92,6 @@ export async function POST(req: Request) {
 }
 ```
 
-#### Locking the proxy to your origins (production)
-
-The default `allowedOrigins: '*'` is convenient for development. It
-echoes the incoming `Origin` header (to support `credentials: 'include'`)
-instead of returning a wildcard `*`. In production, restrict to the
-origins you actually serve:
-
-```ts
-import { createCaptchaProxy } from '@nexwinds/captcha/server'
-
-const proxy = createCaptchaProxy({
-  allowedOrigins: ['https://your-app.com', 'https://www.your-app.com'],
-})
-export const POST = proxy
-export const GET = proxy
-export const OPTIONS = proxy
-```
-
-Origins outside the list get `403`-equivalent preflight responses (no
-`Access-Control-Allow-Origin` set, so the browser blocks the call).
-The proxy always includes `Access-Control-Allow-Credentials: true`.
-
-#### Troubleshooting the proxy
-
-| Symptom | Likely cause |
-|---------|-------------|
-| `405 Method Not Allowed` on `POST /api/captcha/challenge/issue` | Route matches but `POST` isn't exported. Restart `next dev` after creating the file, or check you have all three exports: `GET`, `POST`, `OPTIONS`. |
-| `404 Not Found` on `/api/captcha/*` | The catch-all isn't at `app/api/captcha/[...path]/route.ts`. With App Router, you need the literal folder `[...path]` (with the three dots and square brackets), not just `route.ts` at `app/api/captcha/`. |
-| `CORS error: ... No 'Access-Control-Allow-Origin' header` from the proxy itself | You're hitting the proxy from a different origin than your app. Either set `allowedOrigins` to include it, or set `allowedOrigins: '*'` in dev. |
-| Proxy returns 502 with `Bad Gateway` | The upstream (`nexcookie.com` by default) is unreachable or returned a network error. Check the response body for details. |
-
-Quick diagnostic — verify each method is exported and reaches the SaaS:
-
-```bash
-curl -i https://your-app.com/api/captcha/calibration
-# expect: 200, JSON calibration table
-
-curl -i -X OPTIONS https://your-app.com/api/captcha/challenge/issue \
-  -H "Origin: https://your-app.com" \
-  -H "Access-Control-Request-Method: POST"
-# expect: 204, Access-Control-Allow-Origin: *, Access-Control-Allow-Methods: ..., POST
-
-curl -i -X POST https://your-app.com/api/captcha/challenge/issue \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer pk_live_xxx" \
-  -d '{"fingerprintHash":"fp"}'
-# expect: 200, JSON {challengeId, nonce, bits}
-```
-
-If any of those return 405/404 instead of the expected status, the
-proxy route isn't set up correctly.
-
 ---
 
 ## What the SaaS does (hosted in Nexcookie)
@@ -204,10 +152,7 @@ origin — `*` is rejected by browsers. Echo `Origin` from an allow-list;
 do not reflect arbitrary values. `OPTIONS` preflight must return
 `204 No Content` with the same headers.
 
-If the SaaS isn't CORS-enabled yet, point the widget at a same-origin
-proxy in your app (or any path that
-forwards to the SaaS). The SDK has no other way around CORS — it's a
-browser-enforced boundary.
+The SDK has no other way around CORS — it's a browser-enforced boundary.
 
 ### CSP
 
@@ -224,9 +169,7 @@ Content-Security-Policy:
   base-uri 'self';
 ```
 
-- `connect-src` must include the SaaS origin (or your proxy origin). If
-  you ship the one-line proxy above, `'self'` is sufficient — the
-  widget never makes a cross-origin request.
+- `connect-src` must include the SaaS origin.
 - `style-src 'unsafe-inline'` is required because the widget sets inline
   `style` attributes for the spinner transform.
 - `script-src 'self'` — the widget ships no inline scripts; it loads as
