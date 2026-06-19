@@ -180,7 +180,6 @@ export interface CaptchaContextValue {
   siteKey: string
   locale: Locale
   theme: 'auto' | 'light' | 'dark'
-  endpoint: string
 }
 
 export interface CaptchaProps {
@@ -192,8 +191,6 @@ export interface CaptchaProps {
   locale?: Locale
   /** "auto" follows the user's prefers-color-scheme. */
   theme?: 'auto' | 'light' | 'dark'
-  /** SaaS endpoint override (e.g. for proxying). */
-  endpoint?: string
   /** Fired when the captcha is successfully solved. */
   onSuccess?: (token: string) => void
   /** Fired when the challenge expires. */

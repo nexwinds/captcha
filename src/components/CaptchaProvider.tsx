@@ -16,11 +16,6 @@ export interface CaptchaProviderProps {
   siteKey?: string
   locale?: Locale
   theme?: 'auto' | 'light' | 'dark'
-  /** 
-   * SaaS endpoint override. 
-   * Defaults to 'https://nexcookie.com/api/v1'.
-   */
-  endpoint?: string
   children: ReactNode
 }
 
@@ -33,9 +28,8 @@ export function CaptchaProvider(props: CaptchaProviderProps) {
       siteKey,
       locale: (props.locale ?? 'en') as Locale,
       theme: props.theme ?? 'auto',
-      endpoint: props.endpoint ?? DEFAULT_ENDPOINT,
     }),
-    [siteKey, props.locale, props.theme, props.endpoint],
+    [siteKey, props.locale, props.theme],
   )
   return <CaptchaContext.Provider value={value}>{props.children}</CaptchaContext.Provider>
 }

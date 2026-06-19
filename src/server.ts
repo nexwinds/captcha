@@ -1,39 +1,18 @@
 /**
- * Public server API for @nexwinds/captcha.
+ * # @nexwinds/captcha/server
  *
- * Import in the consumer's Next.js server / route handler:
+ * Server-side utilities for @nexwinds/captcha.
  *
- *   import { createServerClient } from '@nexwinds/captcha/server'
+ * For Next.js, we recommend using **Rewrites** in `next.config.js` to proxy
+ * requests to the SaaS:
  *
- *   const nxw = createServerClient({ secretKey: process.env.NEXWINDS_SECRET_KEY! })
- *   const result = await nxw.verifyToken(token, { ip })
- *
- * For CORS-free browser integration, also export `createCaptchaProxy`:
- *
- *   // app/api/captcha/[...path]/route.ts
- *   import { createCaptchaProxy } from '@nexwinds/captcha/server'
- *   export const { GET, POST, OPTIONS } = createCaptchaProxy()
- *
- *   // OR (Recommended for Next.js 16/Turbopack)
- *   const proxy = createCaptchaProxy()
- *   export const { GET, POST, OPTIONS } = proxy
- *   // OR even simpler:
- *   export const POST = proxy
- *   export const GET = proxy
+ *   // next.config.js
+ *   async rewrites() {
+ *     return [{ source: '/api/captcha/:path*', destination: 'https://nexcookie.com/api/v1/:path*' }]
+ *   }
  */
 
-export {
-  createServerClient,
-  NexWindsServerClient,
-} from './server/createServerClient.js'
-export {
-  createCaptchaProxy,
-  handleCaptchaProxyRequest,
-} from './server/createCaptchaProxy.js'
-export type {
-  CaptchaProxyOptions,
-  CaptchaProxyHandlers,
-} from './server/createCaptchaProxy.js'
+export { createServerClient, NexWindsServerClient } from './server/createServerClient.js'
 export type {
   CreateServerClientOptions,
   VerifyTokenOptions,
@@ -45,4 +24,4 @@ export type {
   TokenVerifyPrincipal,
   Problem,
 } from './types.js'
-export { DEFAULT_PROXY_MOUNT } from './lib/constants.js'
+export { DEFAULT_ENDPOINT } from './lib/constants.js'

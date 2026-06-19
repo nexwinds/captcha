@@ -50,8 +50,6 @@ export interface UseCaptchaOptions {
   onError?: (err: { message: string }) => void
   /** Abort the in-flight solve/verify (component unmount). */
   signal?: AbortSignal
-  /** SaaS endpoint override. */
-  endpoint?: string
 }
 
 export interface UseCaptchaResult {
@@ -66,18 +64,17 @@ export interface UseCaptchaResult {
 let calibrationCache: { value: Calibration; fetchedAt: number } | null = null
 const CALIBRATION_TTL_MS = 24 * 60 * 60 * 1000
 
-async function fetchCalibration(endpoint: string): Promise<Calibration> {
+async function fetchCalibration(): Promise<Calibration> {
   const now = Date.now()
   if (calibrationCache && now - calibrationCache.fetchedAt < CALIBRATION_TTL_MS) {
     return calibrationCache.value
   }
-  const cal = await getCalibration(endpoint, { timeoutMs: HTTP_TIMEOUT_MS })
+  const cal = await getCalibration(DEFAULT_ENDPOINT, { timeoutMs: HTTP_TIMEOUT_MS })
   calibrationCache = { value: cal, fetchedAt: now }
   return cal
 }
 
 export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
-  const endpoint = opts.endpoint || DEFAULT_ENDPOINT
   const [state, setState] = useState<CaptchaState>('idle')
   const [calibration, setCalibration] = useState<Calibration | null>(null)
   const [lastError, setLastError] = useState<string | null>(null)
@@ -93,9 +90,8 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
 
   useEffect(() => {
     if (calibration) return
-    // Always use endpoint (default or prop/context)
     let cancelled = false
-    fetchCalibration(endpoint)
+    fetchCalibration()
       .then((c) => {
         if (cancelled) return
         setCalibration(c)
@@ -109,7 +105,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
     return () => {
       cancelled = true
     }
-  }, [calibration, endpoint])
+  }, [calibration])
 
   const start = useCallback(async () => {
     if (state !== 'idle' && state !== 'blocked' && state !== 'error' && state !== 'success' && state !== 'bypass') {
@@ -123,9 +119,8 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
 
     let challenge: ChallengeIssueResponse | null = null
     try {
-      const cal = calibration ?? FALLBACK_CALIBRATION
       challenge = await issueChallenge(
-        endpoint,
+        DEFAULT_ENDPOINT,
         { fingerprintHash: opts.fingerprintHash },
         { publishableKey: opts.siteKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
       )
@@ -140,11 +135,10 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
         bits,
         signal: ac.signal,
       })
-      void cal
 
       setState('verifying')
       const outcome = await verifyChallenge(
-        endpoint,
+        DEFAULT_ENDPOINT,
         {
           challengeId: ch.challengeId,
           nonce: ch.nonce,
@@ -193,7 +187,6 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
     opts.fingerprintHash,
     opts.getSignals,
     calibration,
-    endpoint,
   ])
 
   const reset = useCallback(() => {

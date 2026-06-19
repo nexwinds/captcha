@@ -1,10 +1,9 @@
 # @nexwinds/captcha
 
-A self-hosted, privacy-first, neutral-UX captcha widget for React and Next.js.
+A privacy-first, neutral-UX captcha widget for React and Next.js.
 
-The widget talks to the **NexWinds captcha SaaS** (currently hosted inside
-[Nexcookie](https://nexcookie.com)) via a **local proxy** in your application. 
-This ensures zero third-party cookies, no CORS issues, and a cleaner network profile.
+The widget talks directly to the **NexWinds captcha SaaS** (hosted inside
+[Nexcookie](https://nexcookie.com)).
 
 > **No reCAPTCHA. No hCaptcha. No Turnstile. No cookies set by this library.**
 
@@ -13,10 +12,8 @@ This ensures zero third-party cookies, no CORS issues, and a cleaner network pro
 ## What you get
 
 - A drop-in `<Captcha />` component with a "I am human" checkbox.
-- CORS-free integration: browser only talks to your own domain.
-- 5-field behavioral signals (dwell, click-hold, mouse, keyboard, honeypot).
+- behavioral signals (dwell, click-hold, mouse, keyboard, honeypot).
 - Web Crypto SHA-256 proof-of-work (chunked, never blocks the main thread).
-- Honeypots: hidden field, hidden link, hidden checkbox — all `aria-hidden` and `tabindex={-1}`.
 - WCAG 2.2 AA: `role="status"`, `aria-live="polite"`, full keyboard support.
 
 ---
@@ -31,70 +28,15 @@ npm install @nexwinds/captcha
 
 ## Setup
 
-### 1. The Proxy (Recommended)
+### 1. Configure "Allowed Origins"
 
-To avoid CORS issues and keep user data on your origin, we recommend mounting a proxy.
+Since the widget talks directly to the SaaS, you MUST add your domain to the "Allowed Origins" list in your **NexWinds dashboard** (inside [nexcookie.com](https://nexcookie.com)).
 
-#### Option A: Next.js Rewrites (Zero-Code)
-
-This is the most reliable and efficient way for Next.js.
-
-```ts
-// next.config.ts or next.config.js
-const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/captcha/:path*',
-        destination: 'https://nexcookie.com/api/v1/:path*',
-      },
-    ]
-  },
-}
-```
-
-#### Option B: Route Handlers (Custom Logic)
-
-```ts
-// app/api/captcha/[...path]/route.ts
-import { handleCaptchaProxyRequest } from '@nexwinds/captcha/server'
-
-export const GET = (req: Request) => handleCaptchaProxyRequest(req)
-export const POST = (req: Request) => handleCaptchaProxyRequest(req)
-export const OPTIONS = (req: Request) => handleCaptchaProxyRequest(req)
-```
-
-### 2. Direct SaaS Calls (Zero-Config)
-
-If you don't want to set up a proxy, the widget can talk directly to the NexWinds SaaS. 
-
-**Note**: You MUST add your domain to the "Allowed Origins" list in your NexWinds dashboard to avoid CORS errors.
-
-```tsx
-import { CaptchaProvider, Captcha } from '@nexwinds/captcha'
-
-export default function App() {
-  return (
-    /* No endpoint prop means it uses https://nexcookie.com/api/v1 directly */
-    <CaptchaProvider siteKey="...">
-      <Captcha onSuccess={(token) => console.log(token)} />
-    </CaptchaProvider>
-  )
-}
-```
-
-### Troubleshooting 405 Errors
-
-If you receive `405 Method Not Allowed` on `POST` requests and **no server logs** appear (even with `debug: true`):
-
-1. **Explicit Exports**: Ensure you are using `export const POST = proxy` (or `export async function POST...`) in your `route.ts`.
-2. **Middleware**: Check if you have a `middleware.ts` that might be intercepting `POST` requests or consuming the request body before it reaches the route.
-3. **Turbopack Cache**: If using Next.js 15+, try restarting your dev server with `npm run dev -- --clean` or deleting the `.next` folder to clear the Turbopack cache.
-4. **Trailing Slashes**: Ensure your widget's `endpoint` configuration matches the proxy mount exactly (avoid mixing `/api/captcha` with `/api/captcha/`).
+Failure to do so will result in **CORS errors**.
 
 ### 2. The Provider
 
-Wrap your app with the provider. It defaults to the `/api/captcha` endpoint.
+Wrap your app with the provider and provide your `siteKey`.
 
 ```tsx
 import { CaptchaProvider } from '@nexwinds/captcha'
@@ -127,7 +69,6 @@ export default function Form() {
     </form>
   )
 }
-```
 
 ### 4. Server-side Verification
 

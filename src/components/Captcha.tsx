@@ -35,7 +35,6 @@ export function Captcha(props: CaptchaProps) {
   const { t } = useTranslations()
 
   const siteKey = props.siteKey ?? props.publishableKey ?? ctx?.siteKey ?? ''
-  const endpoint = props.endpoint ?? ctx?.endpoint
 
   const onVerifyRef = useRef(props.onVerify)
   const onSuccessRef = useRef(props.onSuccess)
@@ -54,7 +53,6 @@ export function Captcha(props: CaptchaProps) {
     onSuccess: useCallback((t: string) => onSuccessRef.current?.(t), []),
     onExpire: useCallback(() => onExpireRef.current?.(), []),
     onError: useCallback((e: { message: string }) => onErrorRef.current?.(e), []),
-    endpoint,
   })
 
   const id = useId()

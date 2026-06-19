@@ -52,7 +52,6 @@ export {
   BRAND_NAME,
   BRAND_URL,
   PRIVACY_URL,
-  DEFAULT_PROXY_MOUNT,
 } from './lib/constants.js'
 
 export { solve, verifyLocallyAsync } from './lib/pow.js'
