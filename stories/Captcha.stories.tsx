@@ -8,7 +8,7 @@ const meta = {
   tags: ['autodocs'],
   parameters: { layout: 'centered' },
   args: {
-    publishableKey: 'pk_test_storybook',
+    siteKey: 'pk_test_storybook',
     onVerify: ((o: VerifyOutcome) => {
       // eslint-disable-next-line no-console
       console.log('[story] verify', o)

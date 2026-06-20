@@ -1,8 +1,8 @@
-# @nexwinds/captcha
+# @nexcaptcha/captcha
 
 A privacy-first, neutral-UX captcha widget for React and Next.js.
 
-The widget talks directly to the **NexWinds captcha SaaS** (hosted inside
+The widget talks directly to the **NEXCAPTCHA SaaS** (hosted inside
 [Nexcookie](https://nexcookie.com)).
 
 > **No reCAPTCHA. No hCaptcha. No Turnstile. No cookies set by this library.**
@@ -12,7 +12,7 @@ The widget talks directly to the **NexWinds captcha SaaS** (hosted inside
 ## What you get
 
 - A drop-in `<Captcha />` component with a "I am human" checkbox.
-- behavioral signals (dwell, click-hold, mouse, keyboard, honeypot).
+- Behavioral signals (dwell, click-hold, mouse, keyboard, honeypot).
 - Web Crypto SHA-256 proof-of-work (chunked, never blocks the main thread).
 - WCAG 2.2 AA: `role="status"`, `aria-live="polite"`, full keyboard support.
 
@@ -21,7 +21,7 @@ The widget talks directly to the **NexWinds captcha SaaS** (hosted inside
 ## Install
 
 ```bash
-npm install @nexwinds/captcha
+npm install @nexcaptcha/captcha
 ```
 
 ---
@@ -30,7 +30,7 @@ npm install @nexwinds/captcha
 
 ### 1. Configure "Allowed Origins"
 
-Since the widget talks directly to the SaaS, you MUST add your domain to the "Allowed Origins" list in your **NexWinds dashboard** (inside [nexcookie.com](https://nexcookie.com)).
+Since the widget talks directly to the SaaS, you MUST add your domain to the "Allowed Origins" list in your **NEXCAPTCHA dashboard** (inside [nexcookie.com](https://nexcookie.com)).
 
 Failure to do so will result in **CORS errors**.
 
@@ -39,11 +39,11 @@ Failure to do so will result in **CORS errors**.
 Wrap your app with the provider and provide your `siteKey`.
 
 ```tsx
-import { CaptchaProvider } from '@nexwinds/captcha'
+import { CaptchaProvider } from '@nexcaptcha/captcha'
 
 export default function Layout({ children }) {
   return (
-    <CaptchaProvider siteKey={process.env.NEXT_PUBLIC_NEXWINDS_SITE_KEY!}>
+    <CaptchaProvider siteKey={process.env.NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY!}>
       {children}
     </CaptchaProvider>
   )
@@ -56,36 +56,37 @@ export default function Layout({ children }) {
 'use client'
 
 import { useState } from 'react'
-import { Captcha } from '@nexwinds/captcha'
+import { Captcha } from '@nexcaptcha/captcha'
 
 export default function Form() {
   const [token, setToken] = useState<string | null>(null)
 
   return (
     <form action="/api/submit" method="POST">
-      <Captcha onSuccess={(token) => setToken(token)} />
+      <Captcha siteKey={process.env.NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY!} onSuccess={(token) => setToken(token)} />
       <input type="hidden" name="captcha_token" value={token ?? ''} />
       <button type="submit" disabled={!token}>Send</button>
     </form>
   )
 }
+```
 
 ### 4. Server-side Verification
 
 ```ts
 // app/api/submit/route.ts
-import { createServerClient } from '@nexwinds/captcha/server'
+import { createServerClient } from '@nexcaptcha/captcha/server'
 import { headers } from 'next/headers'
 
-const nxw = createServerClient({
-  secretKey: process.env.NEXWINDS_SECRET_KEY!,
+const nxc = createServerClient({
+  secretKey: process.env.NEXCAPTCHA_SECRET_KEY!,
 })
 
 export async function POST(req: Request) {
   const { token } = await req.json()
   const ip = (await headers()).get('x-forwarded-for') ?? undefined
 
-  const result = await nxw.verifyToken(token, { ip })
+  const result = await nxc.verifyToken(token, { ip })
   if (!result.ok) return Response.json({ error: result.reason }, { status: 403 })
 
   return Response.json({ ok: true })
@@ -94,143 +95,36 @@ export async function POST(req: Request) {
 
 ---
 
-## What the SaaS does (hosted in Nexcookie)
+## Environment variables
 
-Five endpoints, all under `/api/v1`:
+| Variable                           | Scope        | Required | Notes                                         |
+|------------------------------------|--------------|----------|-----------------------------------------------|
+| `NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY`  | client       | yes      | `pk_live_<hex>` from the dashboard.           |
+| `NEXCAPTCHA_SECRET_KEY`            | server only  | yes      | `sk_live_<hex>`. Used by `createServerClient`. |
 
-| Method | Path                              | Auth         |
-|--------|-----------------------------------|--------------|
-| GET    | `/calibration`                    | none         |
-| POST   | `/challenge/issue`                | `pk_live_…`  |
-| POST   | `/challenge/verify`               | `pk_live_…`  |
-| POST   | `/token/verify`                   | `sk_live_…`  |
-| GET    | `/.well-known/nexwinds.json`      | none         |
-
-Full spec: [`contracts/openapi.yaml`](./contracts/openapi.yaml).
-
-Behavioral signals (v1, exactly 5 fields):
-
-```ts
-{
-  v: 1,
-  dwellMs: 1234,
-  timeToClickMs: 87,
-  mouseMovements: 12,
-  keyboardInteractions: 0,
-  isBot: false
-}
-```
-
-Rate limit: 10 hits per 20 min per `${ip}:${fingerprintHash}` bucket. **No
-`X-RateLimit-*` and no `Retry-After` headers** — the widget backs off
-locally on 429.
-
-Failure mode: `failOpen` is behavior-locked to `true` server-side. On
-internal error, the SaaS returns `200 {status:"success", failOpen:true}`
-and the widget treats it as a soft-OK.
+The `NEXT_PUBLIC_` prefix is a Next.js convention that inlines a variable into client bundles. The secret key must **not** have that prefix so it remains secure on the server.
 
 ---
 
-## Deployment: CORS, CSP, and environment variables
+## Configuration
 
-### CORS
+### Props
 
-The widget calls the SaaS directly from the browser. If your app and the
-SaaS live on different origins, the SaaS must respond with CORS headers
-on every `/api/v1/*` endpoint:
+| Prop        | Type                                      | Description                                                                 |
+|-------------|-------------------------------------------|-----------------------------------------------------------------------------|
+| `siteKey`   | `string`                                  | **Required**. Your public site key from the dashboard.                      |
+| `locale`    | `'en' \| 'pt' \| 'es' \| 'fr' \| 'de' \| 'ja' \| 'zh' \| 'ar'` | UI language. If omitted, detects automatically via `navigator.language`. |
+| `theme`     | `'auto' \| 'light' \| 'dark'`             | Visual theme. `'auto'` follows the user's system dark mode preference.      |
+| `onSuccess` | `(token: string) => void`                 | Called when the captcha is successfully solved.                             |
+| `onError`   | `(err: { message: string }) => void`      | Called on network or unexpected errors.                                     |
 
-```http
-Access-Control-Allow-Origin: https://your-app.com
-Access-Control-Allow-Methods: GET, POST, OPTIONS
-Access-Control-Allow-Headers: Authorization, Content-Type
-Access-Control-Max-Age: 86400
-Vary: Origin
-```
+### Locale (Auto Detection)
 
-`Authorization` and `Content-Type: application/json` require an explicit
-origin — `*` is rejected by browsers. Echo `Origin` from an allow-list;
-do not reflect arbitrary values. `OPTIONS` preflight must return
-`204 No Content` with the same headers.
+By default, the widget automatically detects the user's language using `navigator.language`. If the detected language is not supported, it falls back to English (`en`). You can force a specific language by passing the `locale` prop.
 
-The SDK has no other way around CORS — it's a browser-enforced boundary.
+### Theme (Auto Mode)
 
-### CSP
-
-Minimum directives for a hosted deployment:
-
-```http
-Content-Security-Policy:
-  default-src 'self';
-  connect-src 'self' https://nexcookie.com https://api.nexwinds.com;
-  script-src 'self';
-  style-src 'self' 'unsafe-inline';
-  img-src 'self' data:;
-  frame-ancestors 'none';
-  base-uri 'self';
-```
-
-- `connect-src` must include the SaaS origin.
-- `style-src 'unsafe-inline'` is required because the widget sets inline
-  `style` attributes for the spinner transform.
-- `script-src 'self'` — the widget ships no inline scripts; it loads as
-  an ES module from your bundle.
-- `frame-ancestors 'none'` — the widget must never be iframed by
-  third parties; serve it top-level only.
-
-### Environment variables
-
-| Variable                              | Scope        | Required | Notes                                         |
-|---------------------------------------|--------------|----------|-----------------------------------------------|
-| `NEXT_PUBLIC_NEXWINDS_PUBLISHABLE_KEY` | client       | yes      | `pk_live_<hex>` from the dashboard.           |
-| `NEXWINDS_SECRET_KEY`                  | server only  | yes      | `sk_live_<hex>`. Used by `createServerClient`. |
-
-The `NEXT_PUBLIC_` prefix is a Next.js convention that inlines a variable
-into client bundles; the secret key must **not** have that prefix so it
-gets tree-shaken from the browser bundle. The widget itself never sees
-the secret key, and the server client never sees the publishable key
-beyond what it forwards in the `Authorization` header.
-
----
-
-## Customization
-
-```tsx
-<Captcha
-  publishableKey="pk_live_…"
-  locale="ja"                                 // 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar'
-  theme="dark"                                // 'auto' | 'light' | 'dark'
-  size="compact"                              // 'compact' | 'normal'
-  className="my-form__captcha"
-  onVerify={(o) => { /* ... */ }}
-  onError={(e) => { /* ... */ }}
-/>
-```
-
-CSS variables are exposed for theming. Override on a parent:
-
-```css
-.my-form {
-  --nxw-fg: #111;
-  --nxw-bg: #fff;
-  --nxw-accent: #6d28d9;
-  --nxw-warning: #b45309;
-  --nxw-success: #047857;
-  --nxw-radius: 8px;
-}
-```
-
-### Brand & privacy link
-
-The widget renders a small footer with two outbound links:
-
-- `NEXWINDS` → https://nexwinds.com
-- Privacy (i18n'd) → https://nexwinds.com/legal/privacy-policy
-
-Both open in a new tab with `rel="noopener noreferrer"`. The brand text
-and URLs are constants exported from `@nexwinds/captcha` as `BRAND_NAME`,
-`BRAND_URL`, and `PRIVACY_URL`; they are not currently overridable per
-widget. The privacy link text is localized via the `privacy` key in
-`src/locales/*.json`.
+The `theme` prop defaults to `'auto'`, which automatically switches between light and dark modes based on the user's system settings (`prefers-color-scheme`). You can also force `'light'` or `'dark'` mode.
 
 ---
 
@@ -242,39 +136,4 @@ pnpm test           # vitest
 pnpm typecheck      # tsc --noEmit
 pnpm build          # tsup
 pnpm storybook      # dev server on :6006
-pnpm build-storybook
 ```
-
-The build emits:
-
-- `dist/index.js` + `dist/index.d.ts` — public client API.
-- `dist/server.js` + `dist/server.d.ts` — public server API.
-- `dist/components/Captcha.css` — the resolved CSS module.
-- `contracts/openapi.yaml` — the frozen wire contract (re-published).
-
----
-
-## Security model
-
-- **No third-party code runs in the widget.** Only the bundle we ship.
-- **No cookies are set.** Only `localStorage` is touched, and only for
-  the stable, user-resettable fingerprint hash.
-- **No telemetry.** Nothing is sent anywhere except the 4 documented
-  HTTPS calls to the SaaS.
-- **PoW is mandatory** for non-bypass requests; the SaaS rejects
-  challenges that do not match `sha256(concat(payload, hexDecode(hash)))`.
-- **HMAC tokens** are server-minted and server-verified; the consumer's
-  server never sees the SaaS signing key, and the widget never sees the
-  consumer's secret key.
-- **Bulk revocation**: a domain can revoke all outstanding tokens by
-  writing `nxw:cap:revocation:<domainId> = <ts>`. The SaaS rejects any
-  token whose `iat < revokedAt` (strict less-than).
-
-See [`OPENAPI_ALIGNMENT_RESOLVED.md`](./OPENAPI_ALIGNMENT_RESOLVED.md) for
-the cross-document history that produced this contract.
-
----
-
-## License
-
-[Apache-2.0](./LICENSE) — © 2026 NexWinds.

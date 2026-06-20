@@ -1,7 +1,7 @@
 {
-  "name": "@nexwinds/captcha",
-  "version": "0.1.20",
-  "description": "Self-hosted, privacy-first, neutral-UX captcha widget. Talks to the NexWinds captcha SaaS.",
+  "name": "@nexcaptcha/captcha",
+  "version": "0.1.21",
+  "description": "Self-hosted, privacy-first, neutral-UX captcha widget. Talks to the NEXCAPTCHA SaaS.",
   "license": "Apache-2.0",
   "type": "module",
   "sideEffects": false,
@@ -65,7 +65,7 @@
   },
   "keywords": [
     "captcha",
-    "nexwinds",
+    "nexcaptcha",
     "react",
     "nextjs",
     "self-hosted",

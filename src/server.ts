@@ -1,7 +1,7 @@
 /**
- * # @nexwinds/captcha/server
+ * # @nexcaptcha/captcha/server
  *
- * Server-side utilities for @nexwinds/captcha.
+ * Server-side utilities for @nexcaptcha/captcha.
  *
  * For Next.js, we recommend using **Rewrites** in `next.config.js` to proxy
  * requests to the SaaS:
@@ -12,7 +12,7 @@
  *   }
  */
 
-export { createServerClient, NexWindsServerClient } from './server/createServerClient.js'
+export { createServerClient, NexCaptchaServerClient } from './server/createServerClient.js'
 export type {
   CreateServerClientOptions,
   VerifyTokenOptions,

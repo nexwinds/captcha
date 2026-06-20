@@ -1,5 +1,5 @@
 /**
- * Type-safe HTTPS client for the NexWinds captcha SaaS.
+ * Type-safe HTTPS client for the NEXCAPTCHA captcha SaaS.
  *
  * This is the only file that touches `fetch`. Every other module that needs
  * to talk to the SaaS goes through `captchaFetch`.
@@ -22,7 +22,7 @@ export class CaptchaHttpError extends Error {
   public readonly status: number
   constructor(status: number, problem: Problem) {
     super(
-      `[nexwinds/captcha] HTTP ${status} ${problem.title || ''}: ${problem.detail || ''}`.trim(),
+      `[nexcaptcha] HTTP ${status} ${problem.title || ''}: ${problem.detail || ''}`.trim(),
     )
     this.name = 'CaptchaHttpError'
     this.status = status
@@ -32,20 +32,20 @@ export class CaptchaHttpError extends Error {
 
 export class CaptchaNetworkError extends Error {
   constructor(message: string, public override readonly cause?: unknown) {
-    super(`[nexwinds/captcha] network error: ${message}`)
+    super(`[nexcaptcha] network error: ${message}`)
     this.name = 'CaptchaNetworkError'
   }
 }
 
 export class CaptchaTimeoutError extends Error {
   constructor(public readonly timeoutMs: number) {
-    super(`[nexwinds/captcha] request exceeded ${timeoutMs}ms`)
+    super(`[nexcaptcha] request exceeded ${timeoutMs}ms`)
     this.name = 'CaptchaTimeoutError'
   }
 }
 
 export interface FetchOptions {
-  publishableKey?: string
+  siteKey?: string
   /** Bearer token override (e.g. for server-to-server secret calls). */
   bearer?: string
   signal?: AbortSignal
@@ -62,8 +62,8 @@ function buildHeaders(opts: FetchOptions): Record<string, string> {
   }
   if (opts.bearer) {
     h.Authorization = `Bearer ${opts.bearer}`
-  } else if (opts.publishableKey) {
-    h.Authorization = `Bearer ${opts.publishableKey}`
+  } else if (opts.siteKey) {
+    h.Authorization = `Bearer ${opts.siteKey}`
   }
   return h
 }
@@ -187,7 +187,7 @@ export async function getWellKnown(
   endpoint: string,
   opts: FetchOptions = {},
 ): Promise<WellKnown> {
-  return request<WellKnown>(endpoint, 'GET', '/.well-known/nexwinds.json', undefined, opts)
+  return request<WellKnown>(endpoint, 'GET', '/.well-known/nexcaptcha.json', undefined, opts)
 }
 
 export async function issueChallenge(

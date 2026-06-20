@@ -8,15 +8,15 @@
  *
  * Usage (Next.js App Router):
  *
- *   import { createServerClient } from '@nexwinds/captcha/server'
+ *   import { createServerClient } from '@nexcaptcha/server'
  *
- *   const nxw = createServerClient({
- *     secretKey: process.env.NEXWINDS_SECRET_KEY!,
+ *   const nxc = createServerClient({
+ *     secretKey: process.env.NEXCAPTCHA_SECRET_KEY!,
  *   })
  *
  *   export async function POST(req: Request) {
  *     const { token } = await req.json()
- *     const result = await nxw.verifyToken(token, {
+ *     const result = await nxc.verifyToken(token, {
  *       ip: req.headers.get('x-forwarded-for') ?? undefined,
  *     })
  *     if (!result.ok) return new Response('forbidden', { status: 403 })
@@ -39,16 +39,16 @@ import type {
 } from '../types.js'
 
 /** The SaaS source of truth. */
-const NEXWINDS_SAAS_URL = 'https://nexcookie.com/api/v1'
+const NEXCAPTCHA_SAAS_URL = 'https://nexcookie.com/api/v1'
 
-export class NexWindsServerClient {
+export class NexCaptchaServerClient {
   private readonly secretKey: string
   private readonly endpoint: string
   private readonly fetchImpl: typeof fetch
 
   constructor(opts: CreateServerClientOptions) {
     this.secretKey = opts.secretKey
-    this.endpoint = opts.endpoint ?? NEXWINDS_SAAS_URL
+    this.endpoint = opts.endpoint ?? NEXCAPTCHA_SAAS_URL
     this.fetchImpl = opts.fetch ?? globalThis.fetch
   }
 
@@ -100,8 +100,8 @@ export class NexWindsServerClient {
   }
 }
 
-export function createServerClient(opts: CreateServerClientOptions): NexWindsServerClient {
-  return new NexWindsServerClient(opts)
+export function createServerClient(opts: CreateServerClientOptions): NexCaptchaServerClient {
+  return new NexCaptchaServerClient(opts)
 }
 
 export type { CreateServerClientOptions, VerifyTokenOptions, VerifyTokenResult }

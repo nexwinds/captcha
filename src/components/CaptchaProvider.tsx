@@ -10,26 +10,21 @@ import { DEFAULT_ENDPOINT } from '../lib/constants.js'
 const CaptchaContext = createContext<CaptchaContextValue | null>(null)
 
 export interface CaptchaProviderProps {
-  /** @deprecated use siteKey */
-  publishableKey?: string
   /** siteKey from the captcha dashboard. */
-  siteKey?: string
+  siteKey: string
   locale?: Locale
   theme?: 'auto' | 'light' | 'dark'
   children: ReactNode
 }
 
 export function CaptchaProvider(props: CaptchaProviderProps) {
-  const siteKey = props.siteKey ?? props.publishableKey ?? ''
-
   const value = useMemo<CaptchaContextValue>(
     () => ({
-      publishableKey: siteKey,
-      siteKey,
+      siteKey: props.siteKey,
       locale: (props.locale ?? 'en') as Locale,
       theme: props.theme ?? 'auto',
     }),
-    [siteKey, props.locale, props.theme],
+    [props.siteKey, props.locale, props.theme],
   )
   return <CaptchaContext.Provider value={value}>{props.children}</CaptchaContext.Provider>
 }

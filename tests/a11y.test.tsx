@@ -34,7 +34,7 @@ afterEach(() => {
 
 describe('<Captcha /> a11y', () => {
   it('renders a button with role=checkbox and an aria-labelledby label', async () => {
-    render(<Captcha publishableKey="pk_test_x" onVerify={() => {}} />)
+    render(<Captcha siteKey="pk_test_x" onVerify={() => {}} />)
     const btn = await screen.findByRole('checkbox', { name: /I am human/i })
     expect(btn).toBeInTheDocument()
     await waitFor(() => {
@@ -53,7 +53,7 @@ describe('<Captcha /> a11y', () => {
         issuedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 120_000).toISOString(),
         bits: 8, // low so test is fast
-        origin: 'nexwinds',
+        origin: 'nexcaptcha',
       }
     })
     mockedHttp.verifyChallenge.mockResolvedValue({
@@ -65,7 +65,7 @@ describe('<Captcha /> a11y', () => {
 
     const onVerify = vi.fn()
     const user = userEvent.setup()
-    render(<Captcha publishableKey="pk_test_x" onVerify={onVerify} />)
+    render(<Captcha siteKey="pk_test_x" onVerify={onVerify} />)
     const btn = await screen.findByRole('checkbox', { name: /I am human/i })
 
     await user.click(btn)
@@ -81,20 +81,17 @@ describe('<Captcha /> a11y', () => {
   })
 
   it('hides honeypots from a11y tree (aria-hidden, tabIndex=-1)', async () => {
-    render(<Captcha publishableKey="pk_test_x" onVerify={() => {}} />)
-    const honeypotField = document.querySelector('input[name="nxw_email_field"]')
-    const honeypotLink = document.querySelector('a.nxw-honeypot-link')
-    const honeypotCheckbox = document.querySelector('input[name="nxw_agree"]')
+    render(<Captcha siteKey="pk_test_x" onVerify={() => {}} />)
+    const honeypotField = document.querySelector('input[name="nxc_email_field"]')
+    const honeypotCheckbox = document.querySelector('input[name="nxc_agree"]')
     expect(honeypotField).toHaveAttribute('aria-hidden', 'true')
     expect(honeypotField).toHaveAttribute('tabindex', '-1')
-    expect(honeypotLink).toHaveAttribute('aria-hidden', 'true')
-    expect(honeypotLink).toHaveAttribute('tabindex', '-1')
     expect(honeypotCheckbox).toHaveAttribute('aria-hidden', 'true')
     expect(honeypotCheckbox).toHaveAttribute('tabindex', '-1')
   })
 
   it('status banner uses role=status aria-live=polite', async () => {
-    render(<Captcha publishableKey="pk_test_x" onVerify={() => {}} />)
+    render(<Captcha siteKey="pk_test_x" onVerify={() => {}} />)
     const banner = document.querySelector('[role="status"]')
     expect(banner).toBeInTheDocument()
     expect(banner).toHaveAttribute('aria-live', 'polite')
@@ -103,7 +100,7 @@ describe('<Captcha /> a11y', () => {
   it('renders without throwing when reduced motion is preferred', async () => {
     const mq = { matches: true, addEventListener: () => {}, removeEventListener: () => {} } as unknown as MediaQueryList
     vi.spyOn(window, 'matchMedia').mockReturnValue(mq)
-    render(<Captcha publishableKey="pk_test_x" onVerify={() => {}} />)
+    render(<Captcha siteKey="pk_test_x" onVerify={() => {}} />)
     const root = document.querySelector('[data-reduced-motion="true"]')
     expect(root).toBeInTheDocument()
   })
@@ -115,7 +112,7 @@ describe('<Captcha /> a11y', () => {
       issuedAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 120_000).toISOString(),
       bits: 8,
-      origin: 'nexwinds',
+      origin: 'nexcaptcha',
     })
     mockedHttp.verifyChallenge.mockResolvedValue({
       status: 'success',
@@ -125,7 +122,7 @@ describe('<Captcha /> a11y', () => {
     })
 
     const onVerify = vi.fn()
-    render(<Captcha publishableKey="pk_test_x" onVerify={onVerify} />)
+    render(<Captcha siteKey="pk_test_x" onVerify={onVerify} />)
     const btn = await screen.findByRole('checkbox', { name: /I am human/i })
     btn.focus()
     fireEvent.keyDown(btn, { key: ' ' })

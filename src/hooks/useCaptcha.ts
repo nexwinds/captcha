@@ -122,7 +122,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
       challenge = await issueChallenge(
         DEFAULT_ENDPOINT,
         { fingerprintHash: opts.fingerprintHash },
-        { publishableKey: opts.siteKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
+        { siteKey: opts.siteKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
       )
       if (!challenge) throw new Error('issueChallenge returned null')
       const ch = challenge
@@ -153,7 +153,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
           signals: opts.getSignals(),
           fingerprintHash: opts.fingerprintHash,
         },
-        { publishableKey: opts.siteKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
+        { siteKey: opts.siteKey, signal: ac.signal, timeoutMs: HTTP_TIMEOUT_MS },
       )
 
       const ui: VerifyOutcome = mapOutcome(outcome)

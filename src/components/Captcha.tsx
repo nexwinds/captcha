@@ -34,7 +34,7 @@ export function Captcha(props: CaptchaProps) {
   const honeypot = useHoneypot()
   const { t } = useTranslations()
 
-  const siteKey = props.siteKey ?? props.publishableKey ?? ctx?.siteKey ?? ''
+  const siteKey = props.siteKey ?? ctx?.siteKey ?? ''
 
   const onVerifyRef = useRef(props.onVerify)
   const onSuccessRef = useRef(props.onSuccess)
@@ -121,7 +121,7 @@ export function Captcha(props: CaptchaProps) {
 
   return (
     <div
-      className={`nxwCaptcha ${styles.nxwCaptcha} ${props.className ?? ''}`.trim()}
+      className={`${styles.nxwCaptcha} ${props.className ?? ''}`.trim()}
       data-theme={props.theme ?? ctx?.theme ?? 'auto'}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
       data-state={captcha.state}
@@ -140,23 +140,43 @@ export function Captcha(props: CaptchaProps) {
           data-busy={isBusy ? 'true' : 'false'}
           onClick={onActivate}
           onKeyDown={onCheckboxKeyDown}
-        >
-          {isBusy ? (
-            <span className={styles.nxwSpinner} aria-hidden="true" />
-          ) : null}
-        </button>
-        <label
-          id={`${id}-label`}
-          className={styles.nxwLabel}
-          onClick={(e) => {
-            if (isBusy || checked) {
-              e.preventDefault()
-              return
-            }
-          }}
-        >
-          {checked ? t('success') : t('label')}
-        </label>
+        />
+        <div className={styles.nxwMain}>
+          <label
+            id={`${id}-label`}
+            className={styles.nxwLabel}
+            onClick={(e) => {
+              if (isBusy || checked) {
+                e.preventDefault()
+                return
+              }
+            }}
+          >
+            {checked ? t('success') : t('label')}
+          </label>
+          <div
+            className={styles.nxwStatus}
+            data-tone={status.tone}
+            role="status"
+            aria-live="polite"
+          >
+            {isBusy && <span className={styles.nxwSpinner} aria-hidden="true" />}
+            <span>
+              {status.text}
+              {(captcha.state === 'blocked' || captcha.state === 'error') && (
+                <>
+                  {' '}
+                  <button type="button" className={styles.nxwButtonRetry} onClick={retry}>
+                    {t('retry')}
+                  </button>
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.nxwFooter}>
         <span className={styles.nxwBrand}>
           <a
             className={styles.nxwBrandLink}
@@ -166,9 +186,7 @@ export function Captcha(props: CaptchaProps) {
           >
             {BRAND_NAME}
           </a>
-          <span className={styles.nxwBrandSep} aria-hidden="true">
-            ·
-          </span>
+          <span>·</span>
           <a
             className={styles.nxwPrivacyLink}
             href={PRIVACY_URL}
@@ -180,39 +198,21 @@ export function Captcha(props: CaptchaProps) {
         </span>
       </div>
 
-      <div
-        className={styles.nxwStatus}
-        data-tone={status.tone}
-        role="status"
-        aria-live="polite"
-      >
-        {status.text}
-        {captcha.state === 'blocked' || captcha.state === 'error' ? (
-          <>
-            {' '}
-            <button type="button" className={styles.nxwButtonRetry} onClick={retry}>
-              {t('retry')}
-            </button>
-          </>
-        ) : null}
-      </div>
-
-      {/* Honeypots: a11y-hidden, off-screen, in the tab order is wrong for
-          a *honeypot*; we want bots to interact, real users to skip. */}
+      {/* Honeypots */}
       <input
         type="text"
         tabIndex={-1}
         aria-hidden="true"
         autoComplete="off"
-        className={`nxw-honeypot-field ${styles.nxwHoneypot}`}
-        name="nxw_email_field"
+        className={styles.nxwHoneypot}
+        name="nxc_email_field"
         onChange={honeypot.handlers.onFieldInput}
       />
       <a
         href="#"
         tabIndex={-1}
         aria-hidden="true"
-        className={`nxw-honeypot-link ${styles.nxwHoneypotLink}`}
+        className={styles.nxwHoneypotLink}
         onClick={honeypot.handlers.onLinkClick}
       >
         .
@@ -222,8 +222,8 @@ export function Captcha(props: CaptchaProps) {
         tabIndex={-1}
         aria-hidden="true"
         autoComplete="off"
-        className={`nxw-honeypot-checkbox ${styles.nxwHoneypot}`}
-        name="nxw_agree"
+        className={styles.nxwHoneypot}
+        name="nxc_agree"
         onChange={honeypot.handlers.onCheckboxChange}
       />
     </div>

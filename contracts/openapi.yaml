@@ -1,11 +1,11 @@
 openapi: 3.1.0
 
 info:
-  title: NexWinds Captcha SaaS API
+  title: NEXCAPTCHA SaaS API
   version: 1.0.0
-  summary: Wire contract for the @nexwinds/captcha widget.
+  summary: Wire contract for the @nexcaptcha/captcha widget.
   description: |
-    This is the **wire contract** between the `@nexwinds/captcha` widget
+    This is the **wire contract** between the `@nexcaptcha/captcha` widget
     (running on a third-party site) and the captcha SaaS hosted inside
     Nexcookie (Next.js 16, Bun, Drizzle, Postgres, Redis, BetterAuth).
 
@@ -24,9 +24,9 @@ info:
 
     ### Auth
     - All `/api/v1/*` routes accept `Authorization: Bearer <key>`.
-    - `pk_live_<random_hex>` is the **publishable** key (safe in the browser).
+    - `pk_live_<random_hex>` is the **site** key (safe in the browser).
     - `sk_live_<random_hex>` is the **secret** key (server-to-server only).
-    - The publishable key is the identifier — there is no separate `siteId`
+    - The site key is the identifier — there is no separate `siteId`
       sent in the wire body.
 
     ### Error format
@@ -42,8 +42,8 @@ info:
       per-domain in v1.
     - **No `X-RateLimit-*` headers. No `Retry-After`.** Widgets back off
       locally on 429.
-    - Per-IP-only, per-fingerprint-only, and per-publishable-key caps
-      (`NEXWINDS_CAPTCHA_RL_IP`, `RL_FP`, `RL_KEY`) are deferred to v1.1.
+    - Per-IP-only, per-fingerprint-only, and per-site-key caps
+      (`NEXCAPTCHA_RL_IP`, `RL_FP`, `RL_KEY`) are deferred to v1.1.
 
     ### Failure mode (fail-open, behavior-locked)
     On internal server error, the SaaS returns `200 OK` with
@@ -55,7 +55,7 @@ info:
     IP/fingerprint banning. See CLARIFY_NEXCOOKIE.md § H, K, F4.
 
   contact:
-    name: NexWinds
+    name: NEXCAPTCHA
     url: https://nexwinds.com
   license:
     name: Apache-2.0
@@ -111,7 +111,7 @@ paths:
         Mints a challenge nonce and stores it in Redis with a 120 s TTL.
         Returns the bit count the widget must solve for.
       security:
-        - PublishableKey: []
+        - SiteKey: []
       requestBody:
         required: true
         content:
@@ -166,7 +166,7 @@ paths:
            and `exp` (Unix seconds).
         6. On internal error: returns `200` with `failOpen: true`.
       security:
-        - PublishableKey: []
+        - SiteKey: []
       requestBody:
         required: true
         content:
@@ -177,7 +177,7 @@ paths:
           description: |
             Verification outcome. Three possible shapes:
             - `success`: standard path.
-            - `bypass`: caller is entitled (NEXWINDS billing / `nwCompanyId`).
+            - `bypass`: caller is entitled (NEXCAPTCHA billing / `nwCompanyId`).
             - `failOpen`: server error, behavior-locked open.
           content:
             application/json:
@@ -294,7 +294,7 @@ paths:
                     status: 410
                     detail: "Domain revoked all tokens at 2026-06-19T12:00:00Z"
 
-  /.well-known/nexwinds.json:
+  /.well-known/nexcaptcha.json:
     get:
       tags: [discovery]
       operationId: getWellKnown
@@ -312,7 +312,7 @@ paths:
               examples:
                 production:
                   value:
-                    service: nexwinds-captcha
+                    service: nexcaptcha
                     version: 1.0.0
                     endpoint: "https://nexcookie.com/api/v1"
                     fingerprint: "sha256:8f4356616b4a2e5d7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f"
@@ -320,12 +320,12 @@ paths:
 components:
 
   securitySchemes:
-    PublishableKey:
+    SiteKey:
       type: http
       scheme: bearer
       bearerFormat: pk_live_<random_hex>
       description: |
-        Site-scoped publishable key, safe to embed in the browser.
+        Site-scoped site key, safe to embed in the browser.
         Format: `pk_live_<32-byte-hex>`. Identifies the captcha site 1-to-1.
     SecretKey:
       type: http
@@ -353,7 +353,7 @@ components:
                 type: "https://nexcookie.com/probs/unauthorized"
                 title: "Unauthorized"
                 status: 401
-                detail: "Missing or invalid publishable key"
+                detail: "Missing or invalid site key"
     InternalError:
       description: Internal server error. The widget should also treat this as fail-open.
       content:
@@ -408,7 +408,7 @@ components:
             Bit count the widget must solve for. Defaults to 18 (medium).
         origin:
           type: string
-          const: nexwinds
+          const: nexcaptcha
 
     SignalsV1:
       type: object
@@ -572,7 +572,7 @@ components:
       additionalProperties: false
       required: [service, version, endpoint, fingerprint]
       properties:
-        service:     { type: string, const: nexwinds-captcha }
+        service:     { type: string, const: nexcaptcha }
         version:     { type: string, examples: ["1.0.0"] }
         endpoint:    { type: string, format: uri }
         fingerprint:
@@ -597,7 +597,7 @@ components:
 # ----------------------------------------------------------------------------
 # Notes for the implementer (do not render to clients)
 # ----------------------------------------------------------------------------
-x-nexwinds-internal:
+x-nexcaptcha-internal:
   api-version: 1.0.0
   spec-frozen-at: 2026-06-19
   spec-revision: 2

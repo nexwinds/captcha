@@ -1,5 +1,5 @@
 /**
- * Public types for @nexwinds/captcha.
+ * Public types for @nexcaptcha/captcha.
  *
  * These mirror the locked wire contract in `contracts/openapi.yaml`
  * (revision 2, 2026-06-19). Do not change without updating the spec.
@@ -32,7 +32,7 @@ export interface ChallengeIssueResponse {
   issuedAt: string
   expiresAt: string
   bits: number
-  origin: 'nexwinds'
+  origin: 'nexcaptcha'
 }
 
 // ---------------------------------------------------------------------------
@@ -110,11 +110,11 @@ export interface TokenVerifySuccess {
 }
 
 // ---------------------------------------------------------------------------
-// Well-known (GET /api/v1/.well-known/nexwinds.json)
+// Well-known (GET /api/v1/.well-known/nexcaptcha.json)
 // ---------------------------------------------------------------------------
 
 export interface WellKnown {
-  service: 'nexwinds-captcha'
+  service: 'nexcaptcha'
   version: string
   endpoint: string
   /** "sha256:" + 64 hex chars. */
@@ -175,18 +175,14 @@ export type VerifyOutcome =
 export type Locale = 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar'
 
 export interface CaptchaContextValue {
-  /** @deprecated use siteKey */
-  publishableKey?: string
   siteKey: string
   locale: Locale
   theme: 'auto' | 'light' | 'dark'
 }
 
 export interface CaptchaProps {
-  /** @deprecated use siteKey */
-  publishableKey?: string
   /** siteKey from the captcha dashboard. */
-  siteKey?: string
+  siteKey: string
   /** Locale for UI strings. Defaults to navigator.language or 'en'. */
   locale?: Locale
   /** "auto" follows the user's prefers-color-scheme. */
@@ -200,8 +196,6 @@ export interface CaptchaProps {
   /** Fired on non-terminal errors (network, fetch failure, etc.). */
   onError?: (err: { message: string }) => void
   className?: string
-  /** Visual style override. */
-  size?: 'compact' | 'normal'
 }
 
 // ---------------------------------------------------------------------------

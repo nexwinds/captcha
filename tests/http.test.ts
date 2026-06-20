@@ -67,13 +67,13 @@ describe('http.issueChallenge', () => {
         issuedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 120_000).toISOString(),
         bits: 18,
-        origin: 'nexwinds',
+        origin: 'nexcaptcha',
       }),
     )
     const r = await issueChallenge(
       ENDPOINT,
       { fingerprintHash: 'fp_x' },
-      { publishableKey: 'pk_live_x' },
+      { siteKey: 'pk_live_x' },
     )
     expect(r.challengeId).toBe('ch-1')
     expect(r.bits).toBe(18)
@@ -98,19 +98,19 @@ describe('http.verifyChallenge', () => {
       ENDPOINT,
       {
         challengeId: 'c',
-        nonce: 'a'.repeat(64),
-        hash: '00000001',
+        nonce: 'n',
+        hash: 'h',
         bits: 18,
         signals: {
           v: 1,
-          dwellMs: 1000,
-          timeToClickMs: 80,
-          mouseMovements: 10,
-          keyboardInteractions: 0,
+          dwellMs: 1,
+          timeToClickMs: 1,
+          mouseMovements: 1,
+          keyboardInteractions: 1,
         },
         fingerprintHash: 'fp',
       },
-      { publishableKey: 'pk' },
+      { siteKey: 'pk_live_x' },
     )
     expect(out.status).toBe('success')
   })
@@ -134,7 +134,7 @@ describe('http.verifyChallenge', () => {
         signals: { v: 1, dwellMs: 0, timeToClickMs: 0, mouseMovements: 0, keyboardInteractions: 0 },
         fingerprintHash: 'fp',
       },
-      { publishableKey: 'pk' },
+      { siteKey: 'pk' },
     )
     expect(out.status).toBe('bypass')
   })
@@ -153,7 +153,7 @@ describe('http.verifyChallenge', () => {
         signals: { v: 1, dwellMs: 0, timeToClickMs: 0, mouseMovements: 0, keyboardInteractions: 0 },
         fingerprintHash: 'fp',
       },
-      { publishableKey: 'pk' },
+      { siteKey: 'pk' },
     )
     expect(out.status).toBe('success')
     if (out.status === 'success') {
@@ -176,7 +176,7 @@ describe('http.verifyChallenge', () => {
           signals: { v: 1, dwellMs: 0, timeToClickMs: 0, mouseMovements: 0, keyboardInteractions: 0 },
           fingerprintHash: 'fp',
         },
-        { publishableKey: 'pk' },
+        { siteKey: 'pk' },
       ),
     ).rejects.toMatchObject({
       name: 'CaptchaHttpError',

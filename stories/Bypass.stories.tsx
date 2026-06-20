@@ -7,7 +7,7 @@ const meta = {
   component: Captcha,
   tags: ['autodocs'],
   args: {
-    publishableKey: 'pk_test_entitled',
+    siteKey: 'pk_test_entitled',
     onVerify: ((o: VerifyOutcome) => {
       // eslint-disable-next-line no-console
       console.log('[story] verify (bypass demo)', o)
