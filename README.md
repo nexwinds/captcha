@@ -1,4 +1,4 @@
-# NEXCAPTCHA (`@nexwinds/captcha`)
+# NEXCAPTCHA (`@nexwinds/react-captcha`)
 
 A privacy-first, neutral-UX captcha widget for React and Next.js.
 
@@ -21,7 +21,7 @@ The widget talks directly to the **NEXCAPTCHA SaaS** (hosted inside
 ## Install
 
 ```bash
-npm install @nexwinds/captcha
+npm install @nexwinds/react-captcha
 ```
 
 ---
@@ -40,7 +40,7 @@ Failure to do so will result in **CORS errors**.
 'use client'
 
 import { useState } from 'react'
-import { Captcha } from '@nexwinds/captcha'
+import { Captcha } from '@nexwinds/react-captcha'
 
 export default function Form() {
   const [token, setToken] = useState<string | null>(null)
@@ -68,7 +68,7 @@ If you have multiple forms and want to share a `siteKey`, `locale`, or `theme` g
 
 ```tsx
 // app/layout.tsx
-import { CaptchaProvider } from '@nexwinds/captcha'
+import { CaptchaProvider } from '@nexwinds/react-captcha'
 
 export default function Layout({ children }) {
   return (
@@ -87,7 +87,7 @@ When using the provider, you can omit those props on individual `<Captcha />` co
 
 ```ts
 // app/api/submit/route.ts
-import { createServerClient } from '@nexwinds/captcha/server'
+import { createServerClient } from '@nexwinds/react-captcha/server'
 import { headers } from 'next/headers'
 
 const nxc = createServerClient({
@@ -151,7 +151,7 @@ Content-Security-Policy:
 The `Locale` type is exported from the main package for use in your TypeScript projects:
 
 ```ts
-import type { Locale } from '@nexwinds/captcha'
+import type { Locale } from '@nexwinds/react-captcha'
 
 const myLocale: Locale = 'pt'
 ```

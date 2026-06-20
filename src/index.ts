@@ -1,9 +1,9 @@
 /**
- * Public client API for NEXCAPTCHA (@nexwinds/captcha).
+ * Public client API for NEXCAPTCHA (@nexwinds/react-captcha).
  *
  * Import in any React 18+ / Next.js 13+ app:
  *
- *   import { Captcha, CaptchaProvider, useCaptcha } from '@nexwinds/captcha'
+ *   import { Captcha, CaptchaProvider, useCaptcha } from '@nexwinds/react-captcha'
  *
  * No third-party services, no telemetry, no cookies.
  */

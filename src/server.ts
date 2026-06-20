@@ -1,7 +1,7 @@
 /**
- * # @nexwinds/captcha/server
+ * # @nexwinds/react-captcha/server
  *
- * Server-side utilities for NEXCAPTCHA (@nexwinds/captcha).
+ * Server-side utilities for NEXCAPTCHA (@nexwinds/react-captcha).
  *
  * For Next.js, we recommend using **Rewrites** in `next.config.js` to proxy
  * requests to the SaaS:
