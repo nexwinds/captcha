@@ -42,9 +42,20 @@ const MAX_COUNTER = 0xffffffff
 
 const HEX_CHARS = '0123456789abcdef'
 
-function bytesToHex(bytes: Uint8Array): string {
+function bytesToHexSafe(bytes: Uint8Array): string {
+  if (bytes.length !== 4) {
+    // This should never happen for the PoW solution.
+    // If it does, we want to know about it.
+    let hex = ''
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i] ?? 0
+      hex += HEX_CHARS[(b >> 4) & 0xf]
+      hex += HEX_CHARS[b & 0xf]
+    }
+    return hex
+  }
   let out = ''
-  for (let i = 0; i < bytes.length; i++) {
+  for (let i = 0; i < 4; i++) {
     const b = bytes[i] ?? 0
     out += HEX_CHARS[(b >> 4) & 0xf]
     out += HEX_CHARS[b & 0xf]
@@ -130,8 +141,10 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
       const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', asBufferSource(combined)))
 
       if (hasLeadingZeroBits(digest, bits)) {
-        const solutionHex = bytesToHex(solutionBytes)
-        // Ensure we ONLY return the 8-character counter hex.
+        const solutionHex = bytesToHexSafe(solutionBytes)
+        if (solutionHex.length !== 8) {
+          throw new Error(`solve: internal error: solutionHex length is ${solutionHex.length}, expected 8`)
+        }
         return {
           hash: solutionHex,
           counter,

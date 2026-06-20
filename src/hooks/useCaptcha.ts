@@ -137,12 +137,18 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
       })
 
       setState('verifying')
+      // FINAL VERIFICATION: ensure hash is 8 chars before sending
+      const finalHash = String(solved.hash)
+      if (finalHash.length !== 8) {
+        throw new Error(`useCaptcha: solver returned hash of length ${finalHash.length}, expected 8`)
+      }
+
       const outcome = await verifyChallenge(
         DEFAULT_ENDPOINT,
         {
           challengeId: ch.challengeId,
           nonce: ch.nonce,
-          hash: solved.hash,
+          hash: finalHash,
           bits: ch.bits, // Send original bits, not the capped ones
           signals: opts.getSignals(),
           fingerprintHash: opts.fingerprintHash,
