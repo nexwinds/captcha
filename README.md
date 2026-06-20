@@ -1,4 +1,4 @@
-# @nexcaptcha/captcha
+# NEXCAPTCHA (`@nexwinds/captcha`)
 
 A privacy-first, neutral-UX captcha widget for React and Next.js.
 
@@ -21,7 +21,7 @@ The widget talks directly to the **NEXCAPTCHA SaaS** (hosted inside
 ## Install
 
 ```bash
-npm install @nexcaptcha/captcha
+npm install @nexwinds/captcha
 ```
 
 ---
@@ -39,7 +39,7 @@ Failure to do so will result in **CORS errors**.
 Wrap your app with the provider and provide your `siteKey`.
 
 ```tsx
-import { CaptchaProvider } from '@nexcaptcha/captcha'
+import { CaptchaProvider } from '@nexwinds/captcha'
 
 export default function Layout({ children }) {
   return (
@@ -56,7 +56,7 @@ export default function Layout({ children }) {
 'use client'
 
 import { useState } from 'react'
-import { Captcha } from '@nexcaptcha/captcha'
+import { Captcha } from '@nexwinds/captcha'
 
 export default function Form() {
   const [token, setToken] = useState<string | null>(null)
@@ -75,7 +75,7 @@ export default function Form() {
 
 ```ts
 // app/api/submit/route.ts
-import { createServerClient } from '@nexcaptcha/captcha/server'
+import { createServerClient } from '@nexwinds/captcha/server'
 import { headers } from 'next/headers'
 
 const nxc = createServerClient({

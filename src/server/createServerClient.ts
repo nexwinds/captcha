@@ -8,7 +8,7 @@
  *
  * Usage (Next.js App Router):
  *
- *   import { createServerClient } from '@nexcaptcha/server'
+ *   import { createServerClient } from '@nexwinds/captcha/server'
  *
  *   const nxc = createServerClient({
  *     secretKey: process.env.NEXCAPTCHA_SECRET_KEY!,

@@ -1,5 +1,5 @@
 {
-  "name": "@nexcaptcha/captcha",
+  "name": "@nexwinds/captcha",
   "version": "0.1.21",
   "description": "Self-hosted, privacy-first, neutral-UX captcha widget. Talks to the NEXCAPTCHA SaaS.",
   "license": "Apache-2.0",
