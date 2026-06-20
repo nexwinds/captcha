@@ -102,8 +102,12 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
   if (bits < 0 || bits > 256) {
     throw new RangeError(`bits must be in [0, 256], got ${bits}`)
   }
-  const payload = `${challengeId}:${nonce}`
-  const payloadBytes = utf8(payload)
+
+  // Prefix = challengeId + ":" + nonce
+  // Ensure we use literal string representation and no extra whitespace.
+  const prefix = `${challengeId}:${nonce}`
+  const prefixBytes = utf8(prefix)
+
   const chunkSize = opts.chunkSize ?? CHUNK
   const start = performance.now()
   let counter = 0
@@ -117,12 +121,12 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
     for (let i = 0; i < chunkSize && counter <= MAX_COUNTER; i++, counter++) {
       // The server expects exactly the 4-byte Big-Endian counter as the solution.
       const counterBytes = new Uint8Array(4)
-      counterBytes[0] = (counter >> 24) & 0xff
-      counterBytes[1] = (counter >> 16) & 0xff
-      counterBytes[2] = (counter >> 8) & 0xff
+      counterBytes[0] = (counter >>> 24) & 0xff
+      counterBytes[1] = (counter >>> 16) & 0xff
+      counterBytes[2] = (counter >>> 8) & 0xff
       counterBytes[3] = counter & 0xff
 
-      const combined = concat(payloadBytes, counterBytes)
+      const combined = concat(prefixBytes, counterBytes)
       const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', asBufferSource(combined)))
 
       if (hasLeadingZeroBits(digest, bits)) {
