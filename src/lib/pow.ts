@@ -120,19 +120,20 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
     }
     for (let i = 0; i < chunkSize && counter <= MAX_COUNTER; i++, counter++) {
       // The server expects exactly the 4-byte Big-Endian counter as the solution.
-      const counterBytes = new Uint8Array(4)
-      counterBytes[0] = (counter >>> 24) & 0xff
-      counterBytes[1] = (counter >>> 16) & 0xff
-      counterBytes[2] = (counter >>> 8) & 0xff
-      counterBytes[3] = counter & 0xff
+      const solutionBytes = new Uint8Array(4)
+      solutionBytes[0] = (counter >>> 24) & 0xff
+      solutionBytes[1] = (counter >>> 16) & 0xff
+      solutionBytes[2] = (counter >>> 8) & 0xff
+      solutionBytes[3] = counter & 0xff
 
-      const combined = concat(prefixBytes, counterBytes)
+      const combined = concat(prefixBytes, solutionBytes)
       const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', asBufferSource(combined)))
 
       if (hasLeadingZeroBits(digest, bits)) {
+        const solutionHex = bytesToHex(solutionBytes)
+        // Ensure we ONLY return the 8-character counter hex.
         return {
-          // Return the 4-byte counter hex-encoded.
-          hash: bytesToHex(counterBytes),
+          hash: solutionHex,
           counter,
           elapsedMs: performance.now() - start,
         }
