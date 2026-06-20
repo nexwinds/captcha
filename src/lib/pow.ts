@@ -8,9 +8,9 @@
  *   require:   first `bits` bits of `digest` are zero
  *
  * The solver iterates a 32-bit counter, hashes `(payload, counter)` with
- * SHA-256, and returns the first hex-encoded digest whose binary
- * representation has `bits` leading zero bits. Verification is a direct
- * leading-zero-bit check on the returned 32-byte hash (no re-hash).
+ * SHA-256, and returns the first 4-byte counter (8 hex characters) whose
+ * digest has `bits` leading zero bits. Verification requires the server
+ * to re-hash the payload with the counter.
  *
  * `solve()` yields to the event loop every CHUNK iterations via
  * `requestIdleCallback` (with a `setTimeout` fallback) so the main
@@ -29,7 +29,7 @@ export interface SolveOptions {
 }
 
 export interface SolveResult {
-  /** 64-character hex string (32 bytes) the solver found. */
+  /** 8-character hex string (4-byte Big-Endian counter) the solver found. */
   hash: string
   /** Counter value used. */
   counter: number

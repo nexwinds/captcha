@@ -449,11 +449,11 @@ components:
         nonce:        { type: string, minLength: 64, maxLength: 64 }
         hash:
           type: string
-          minLength: 64
-          maxLength: 64
+          minLength: 8
+          maxLength: 8
           description: |
-            The 64-character hex string the widget found by brute force.
-            The server validates by computing
+            The 8-character hex string (4-byte Big-Endian counter) the widget
+            found by brute force. The server validates by computing
             `sha256( concat(utf8("<challengeId>:<nonce>"), hexDecode(hash)) )`
             and asserting at least `bits` leading-zero bits.
         bits:         { type: integer, minimum: 0, maximum: 64 }

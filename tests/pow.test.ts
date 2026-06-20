@@ -10,6 +10,7 @@ describe('pow', () => {
       chunkSize: 1,
     })
     expect(r.hash).toMatch(/^[0-9a-f]{8}$/)
+    expect(r.hash.length).toBe(8)
     expect(r.counter).toBe(0)
   })
 

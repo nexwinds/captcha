@@ -99,7 +99,7 @@ describe('http.verifyChallenge', () => {
       {
         challengeId: 'c',
         nonce: 'a'.repeat(64),
-        hash: 'b'.repeat(64),
+        hash: '00000001',
         bits: 18,
         signals: {
           v: 1,
@@ -129,7 +129,7 @@ describe('http.verifyChallenge', () => {
       {
         challengeId: 'c',
         nonce: 'a'.repeat(64),
-        hash: 'b'.repeat(64),
+        hash: '00000001',
         bits: 18,
         signals: { v: 1, dwellMs: 0, timeToClickMs: 0, mouseMovements: 0, keyboardInteractions: 0 },
         fingerprintHash: 'fp',
@@ -148,7 +148,7 @@ describe('http.verifyChallenge', () => {
       {
         challengeId: 'c',
         nonce: 'a'.repeat(64),
-        hash: 'b'.repeat(64),
+        hash: '00000001',
         bits: 18,
         signals: { v: 1, dwellMs: 0, timeToClickMs: 0, mouseMovements: 0, keyboardInteractions: 0 },
         fingerprintHash: 'fp',
@@ -171,7 +171,7 @@ describe('http.verifyChallenge', () => {
         {
           challengeId: 'c',
           nonce: 'a'.repeat(64),
-          hash: 'b'.repeat(64),
+          hash: '00000001',
           bits: 18,
           signals: { v: 1, dwellMs: 0, timeToClickMs: 0, mouseMovements: 0, keyboardInteractions: 0 },
           fingerprintHash: 'fp',
