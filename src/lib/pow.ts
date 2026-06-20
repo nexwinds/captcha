@@ -115,12 +115,22 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
       throw new DOMException('solve aborted', 'AbortError')
     }
     for (let i = 0; i < chunkSize && counter <= MAX_COUNTER; i++, counter++) {
-      const counterBytes = new Uint8Array(new Uint32Array([counter]).buffer)
-      const combined = concat(payloadBytes, counterBytes)
+      // Use 32-byte nonce (4-byte Big-Endian counter + 28 bytes of zeros)
+      // as the solution, so the server can re-hash it.
+      const nonceBytes = new Uint8Array(32)
+      nonceBytes[0] = (counter >> 24) & 0xff
+      nonceBytes[1] = (counter >> 16) & 0xff
+      nonceBytes[2] = (counter >> 8) & 0xff
+      nonceBytes[3] = counter & 0xff
+
+      const combined = concat(payloadBytes, nonceBytes)
       const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', asBufferSource(combined)))
+
       if (hasLeadingZeroBits(digest, bits)) {
         return {
-          hash: bytesToHex(digest),
+          // Return the nonce (the input to the hash), not the digest.
+          // This matches the server's expectation to re-hash.
+          hash: bytesToHex(nonceBytes),
           counter,
           elapsedMs: performance.now() - start,
         }
@@ -145,7 +155,6 @@ export function verifyLocally(
   if (bits < 0 || bits > 256) return false
   if (hashHex.length !== 64) return false
   const payload = utf8(`${challengeId}:${nonce}`)
-  const counterBytes = new Uint8Array(new Uint32Array([0]).buffer) // unused; we hash `hash` instead
   // The server's algorithm is: sha256(concat(utf8(payload), hexDecode(hash)))
   // We replicate that.
   const decoded = new Uint8Array(32)
@@ -158,7 +167,6 @@ export function verifyLocally(
   // is only kept for documentation and short-circuits bits=0.
   if (bits === 0) return true
   // Reject — use verifyLocallyAsync in actual test code.
-  void counterBytes
   return false
 }
 
@@ -171,13 +179,16 @@ export async function verifyLocallyAsync(
   if (bits < 0 || bits > 256) return false
   if (hashHex.length !== 64) return false
   if (bits === 0) return true
-  // The solver returns the digest that *itself* has the required leading
-  // zero bits, so verification is a direct check of the bytes (no re-hash).
+
+  const payload = utf8(`${challengeId}:${nonce}`)
   const decoded = new Uint8Array(32)
   for (let i = 0; i < 32; i++) {
     const byte = parseInt(hashHex.slice(i * 2, i * 2 + 2), 16)
     if (Number.isNaN(byte)) return false
     decoded[i] = byte
   }
-  return hasLeadingZeroBits(decoded, bits)
+
+  const combined = concat(payload, decoded)
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', asBufferSource(combined)))
+  return hasLeadingZeroBits(digest, bits)
 }

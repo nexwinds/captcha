@@ -143,7 +143,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
           challengeId: ch.challengeId,
           nonce: ch.nonce,
           hash: solved.hash,
-          bits,
+          bits: ch.bits, // Send original bits, not the capped ones
           signals: opts.getSignals(),
           fingerprintHash: opts.fingerprintHash,
         },
