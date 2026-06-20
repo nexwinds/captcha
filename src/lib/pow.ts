@@ -115,22 +115,20 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
       throw new DOMException('solve aborted', 'AbortError')
     }
     for (let i = 0; i < chunkSize && counter <= MAX_COUNTER; i++, counter++) {
-      // Use 32-byte nonce (4-byte Big-Endian counter + 28 bytes of zeros)
-      // as the solution, so the server can re-hash it.
-      const nonceBytes = new Uint8Array(32)
-      nonceBytes[0] = (counter >> 24) & 0xff
-      nonceBytes[1] = (counter >> 16) & 0xff
-      nonceBytes[2] = (counter >> 8) & 0xff
-      nonceBytes[3] = counter & 0xff
+      // The server expects exactly the 4-byte Big-Endian counter as the solution.
+      const counterBytes = new Uint8Array(4)
+      counterBytes[0] = (counter >> 24) & 0xff
+      counterBytes[1] = (counter >> 16) & 0xff
+      counterBytes[2] = (counter >> 8) & 0xff
+      counterBytes[3] = counter & 0xff
 
-      const combined = concat(payloadBytes, nonceBytes)
+      const combined = concat(payloadBytes, counterBytes)
       const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', asBufferSource(combined)))
 
       if (hasLeadingZeroBits(digest, bits)) {
         return {
-          // Return the nonce (the input to the hash), not the digest.
-          // This matches the server's expectation to re-hash.
-          hash: bytesToHex(nonceBytes),
+          // Return the 4-byte counter hex-encoded.
+          hash: bytesToHex(counterBytes),
           counter,
           elapsedMs: performance.now() - start,
         }
@@ -153,12 +151,11 @@ export function verifyLocally(
   hashHex: string,
 ): boolean {
   if (bits < 0 || bits > 256) return false
-  if (hashHex.length !== 64) return false
+  // The solution is now a 4-byte counter (8 hex chars).
+  if (hashHex.length !== 8) return false
   const payload = utf8(`${challengeId}:${nonce}`)
-  // The server's algorithm is: sha256(concat(utf8(payload), hexDecode(hash)))
-  // We replicate that.
-  const decoded = new Uint8Array(32)
-  for (let i = 0; i < 32; i++) {
+  const decoded = new Uint8Array(4)
+  for (let i = 0; i < 4; i++) {
     decoded[i] = parseInt(hashHex.slice(i * 2, i * 2 + 2), 16)
   }
   const combined = concat(payload, decoded)
@@ -177,12 +174,12 @@ export async function verifyLocallyAsync(
   hashHex: string,
 ): Promise<boolean> {
   if (bits < 0 || bits > 256) return false
-  if (hashHex.length !== 64) return false
+  if (hashHex.length !== 8) return false
   if (bits === 0) return true
 
   const payload = utf8(`${challengeId}:${nonce}`)
-  const decoded = new Uint8Array(32)
-  for (let i = 0; i < 32; i++) {
+  const decoded = new Uint8Array(4)
+  for (let i = 0; i < 4; i++) {
     const byte = parseInt(hashHex.slice(i * 2, i * 2 + 2), 16)
     if (Number.isNaN(byte)) return false
     decoded[i] = byte

@@ -56,7 +56,7 @@ export interface ChallengeVerifyRequest {
   challengeId: string
   /** 64-character hex (32 bytes). */
   nonce: string
-  /** 64-character hex (32 bytes) the widget found by brute force. */
+  /** 8-character hex (4-byte Big-Endian counter) the widget found. */
   hash: string
   bits: number
   signals: SignalsV1
