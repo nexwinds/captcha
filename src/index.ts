@@ -3,7 +3,7 @@
  *
  * Import in any React 18+ / Next.js 13+ app:
  *
- *   import { Captcha, CaptchaProvider, useCaptcha, useTranslations } from '@nexwinds/captcha'
+ *   import { Captcha, CaptchaProvider, useCaptcha } from '@nexwinds/captcha'
  *
  * No third-party services, no telemetry, no cookies.
  */
@@ -12,11 +12,7 @@ export { Captcha } from './components/Captcha.js'
 export { CaptchaProvider, useCaptchaContext } from './components/CaptchaProvider.js'
 
 export { useCaptcha } from './hooks/useCaptcha.js'
-export type {
-  UseCaptchaOptions,
-  UseCaptchaResult,
-  CaptchaState,
-} from './hooks/useCaptcha.js'
+export type { UseCaptchaOptions, UseCaptchaResult, CaptchaState } from './hooks/useCaptcha.js'
 
 export { useBehavioralSignals } from './hooks/useBehavioralSignals.js'
 export type {
@@ -27,7 +23,6 @@ export type {
 export { useFingerprint } from './hooks/useFingerprint.js'
 export { useHoneypot } from './hooks/useHoneypot.js'
 export type { UseHoneypotResult } from './hooks/useHoneypot.js'
-export { useTranslations } from './hooks/useTranslations.js'
 
 export { translate, resolveLocale, detectBrowserLocale, SUPPORTED_LOCALES } from './lib/i18n.js'
 export type { TranslationKey, Translations } from './lib/i18n.js'

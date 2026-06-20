@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * <Captcha /> — the widget.
  *
@@ -32,7 +34,7 @@ export function Captcha(props: CaptchaProps) {
   const { hash: fingerprintHash, ready: fingerprintReady } = useFingerprint()
   const signals = useBehavioralSignals({ active: true })
   const honeypot = useHoneypot()
-  const { t } = useTranslations()
+  const { t } = useTranslations(props.locale)
 
   const siteKey = props.siteKey ?? ctx?.siteKey ?? ''
 
@@ -74,6 +76,7 @@ export function Captcha(props: CaptchaProps) {
     captcha.state === 'verifying'
 
   const checked = captcha.state === 'success' || captcha.state === 'bypass'
+  const isFallback = captcha.state === 'fallback'
 
   const status = useMemo(() => {
     switch (captcha.state) {
@@ -89,6 +92,8 @@ export function Captcha(props: CaptchaProps) {
         return { tone: 'warning' as const, text: t('warning') }
       case 'error':
         return { tone: 'error' as const, text: t('error') }
+      case 'fallback':
+        return { tone: 'info' as const, text: t('math_pick') }
       default:
         return { tone: 'info' as const, text: '' }
     }
@@ -96,11 +101,11 @@ export function Captcha(props: CaptchaProps) {
 
   const onActivate = useCallback(
     (_e: MouseEvent | KeyboardEvent) => {
-      if (isBusy) return
+      if (isBusy || isFallback) return
       if (checked) return
       void captcha.start()
     },
-    [isBusy, checked, captcha],
+    [isBusy, isFallback, checked, captcha],
   )
 
   const onCheckboxKeyDown = useCallback(
@@ -134,7 +139,7 @@ export function Captcha(props: CaptchaProps) {
           aria-checked={checked}
           aria-busy={isBusy}
           aria-labelledby={`${id}-label`}
-          disabled={!fingerprintReady || isBusy}
+          disabled={!fingerprintReady || isBusy || isFallback}
           className={styles.nxwCheckbox}
           data-checked={checked ? 'true' : 'false'}
           data-busy={isBusy ? 'true' : 'false'}
@@ -146,14 +151,32 @@ export function Captcha(props: CaptchaProps) {
             id={`${id}-label`}
             className={styles.nxwLabel}
             onClick={(e) => {
-              if (isBusy || checked) {
+              if (isBusy || checked || captcha.state === 'fallback') {
                 e.preventDefault()
                 return
               }
             }}
           >
-            {checked ? t('success') : t('label')}
+            {captcha.state === 'fallback' && captcha.mathChallenge
+              ? t('math_question', { q: captcha.mathChallenge.question })
+              : checked
+                ? t('success')
+                : t('label')}
           </label>
+          {captcha.state === 'fallback' && captcha.mathChallenge && (
+            <div className={styles.nxwMathOptions}>
+              {captcha.mathChallenge.options.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={styles.nxwMathButton}
+                  onClick={() => captcha.submitMath(opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
           <div
             className={styles.nxwStatus}
             data-tone={status.tone}

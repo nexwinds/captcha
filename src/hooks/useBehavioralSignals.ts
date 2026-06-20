@@ -46,9 +46,10 @@ export function useBehavioralSignals(
   const recompute = useCallback(() => {
     const raw: RawSignals = {
       dwellMs: mountedAtRef.current ? performance.now() - mountedAtRef.current : 0,
-      timeToClickMs: clickStartRef.current && mountedAtRef.current
-        ? clickStartRef.current - mountedAtRef.current
-        : 0,
+      timeToClickMs:
+        clickStartRef.current && mountedAtRef.current
+          ? clickStartRef.current - mountedAtRef.current
+          : 0,
       mouseMovements: mouseMovementsRef.current,
       keyboardInteractions: keyboardInteractionsRef.current,
       isBot: isBotRef.current,
@@ -111,9 +112,10 @@ export function useBehavioralSignals(
   const getSignals = useCallback(() => {
     const raw: RawSignals = {
       dwellMs: mountedAtRef.current ? performance.now() - mountedAtRef.current : 0,
-      timeToClickMs: clickStartRef.current && mountedAtRef.current
-        ? clickStartRef.current - mountedAtRef.current
-        : 0,
+      timeToClickMs:
+        clickStartRef.current && mountedAtRef.current
+          ? clickStartRef.current - mountedAtRef.current
+          : 0,
       mouseMovements: mouseMovementsRef.current,
       keyboardInteractions: keyboardInteractionsRef.current,
       isBot: isBotRef.current,
@@ -124,9 +126,10 @@ export function useBehavioralSignals(
   const getRiskBand = useCallback(() => {
     return classify({
       dwellMs: mountedAtRef.current ? performance.now() - mountedAtRef.current : 0,
-      timeToClickMs: clickStartRef.current && mountedAtRef.current
-        ? clickStartRef.current - mountedAtRef.current
-        : 0,
+      timeToClickMs:
+        clickStartRef.current && mountedAtRef.current
+          ? clickStartRef.current - mountedAtRef.current
+          : 0,
       mouseMovements: mouseMovementsRef.current,
       keyboardInteractions: keyboardInteractionsRef.current,
       isBot: isBotRef.current,

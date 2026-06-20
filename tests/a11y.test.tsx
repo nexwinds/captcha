@@ -24,7 +24,11 @@ beforeEach(() => {
 
   // happy default
   mockedHttp.getCalibration.mockResolvedValue({
-    v: 1, low: 16, medium: 18, high: 20, critical: 23,
+    v: 1,
+    low: 16,
+    medium: 18,
+    high: 20,
+    critical: 23,
   })
 })
 
@@ -74,9 +78,7 @@ describe('<Captcha /> a11y', () => {
       expect(mockedHttp.issueChallenge).toHaveBeenCalled()
     })
     await waitFor(() => {
-      expect(onVerify).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'success' }),
-      )
+      expect(onVerify).toHaveBeenCalledWith(expect.objectContaining({ status: 'success' }))
     })
   })
 
@@ -98,7 +100,11 @@ describe('<Captcha /> a11y', () => {
   })
 
   it('renders without throwing when reduced motion is preferred', async () => {
-    const mq = { matches: true, addEventListener: () => {}, removeEventListener: () => {} } as unknown as MediaQueryList
+    const mq = {
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    } as unknown as MediaQueryList
     vi.spyOn(window, 'matchMedia').mockReturnValue(mq)
     render(<Captcha siteKey="pk_test_x" onVerify={() => {}} />)
     const root = document.querySelector('[data-reduced-motion="true"]')

@@ -21,9 +21,7 @@ export class CaptchaHttpError extends Error {
   public readonly problem: Problem
   public readonly status: number
   constructor(status: number, problem: Problem) {
-    super(
-      `[nexcaptcha] HTTP ${status} ${problem.title || ''}: ${problem.detail || ''}`.trim(),
-    )
+    super(`[nexcaptcha] HTTP ${status} ${problem.title || ''}: ${problem.detail || ''}`.trim())
     this.name = 'CaptchaHttpError'
     this.status = status
     this.problem = problem
@@ -31,7 +29,10 @@ export class CaptchaHttpError extends Error {
 }
 
 export class CaptchaNetworkError extends Error {
-  constructor(message: string, public override readonly cause?: unknown) {
+  constructor(
+    message: string,
+    public override readonly cause?: unknown,
+  ) {
     super(`[nexcaptcha] network error: ${message}`)
     this.name = 'CaptchaNetworkError'
   }
@@ -71,16 +72,15 @@ function buildHeaders(opts: FetchOptions): Record<string, string> {
 function isProblem(value: unknown): value is Problem {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
-  return (
-    typeof v.type === 'string' &&
-    typeof v.title === 'string' &&
-    typeof v.status === 'number'
-  )
+  return typeof v.type === 'string' && typeof v.title === 'string' && typeof v.status === 'number'
 }
 
 async function parseResponseBody(res: Response): Promise<unknown> {
   const contentType = res.headers.get('Content-Type') || ''
-  if (contentType.includes('application/json') || contentType.includes('application/problem+json')) {
+  if (
+    contentType.includes('application/json') ||
+    contentType.includes('application/problem+json')
+  ) {
     try {
       return await res.json()
     } catch {
@@ -183,10 +183,7 @@ export async function getCalibration(
   return request<Calibration>(endpoint, 'GET', '/calibration', undefined, opts)
 }
 
-export async function getWellKnown(
-  endpoint: string,
-  opts: FetchOptions = {},
-): Promise<WellKnown> {
+export async function getWellKnown(endpoint: string, opts: FetchOptions = {}): Promise<WellKnown> {
   return request<WellKnown>(endpoint, 'GET', '/.well-known/nexcaptcha.json', undefined, opts)
 }
 

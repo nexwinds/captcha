@@ -9,8 +9,8 @@
   --nxc-success: #047857;
   --nxc-error: #b91c1c;
   --nxc-radius: 8px;
-  --nxc-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, "Noto Sans", sans-serif;
+  --nxc-font:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
   --nxc-fg-on-accent: #ffffff;
 
   display: inline-flex;
@@ -23,7 +23,9 @@
   user-select: none;
   border: 1px solid var(--nxc-border);
   border-radius: var(--nxc-radius);
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
   overflow: hidden;
 }
 
@@ -31,24 +33,24 @@
   border-color: var(--nxc-border-active);
 }
 
-.nxwCaptcha[data-state="verifying"],
-.nxwCaptcha[data-state="solving"],
-.nxwCaptcha[data-state="issuing"] {
+.nxwCaptcha[data-state='verifying'],
+.nxwCaptcha[data-state='solving'],
+.nxwCaptcha[data-state='issuing'] {
   border-color: var(--nxc-accent);
   box-shadow: 0 0 0 1px var(--nxc-accent);
 }
 
-.nxwCaptcha[data-state="error"],
-.nxwCaptcha[data-state="blocked"] {
+.nxwCaptcha[data-state='error'],
+.nxwCaptcha[data-state='blocked'] {
   border-color: var(--nxc-error);
 }
 
-.nxwCaptcha[data-state="success"],
-.nxwCaptcha[data-state="bypass"] {
+.nxwCaptcha[data-state='success'],
+.nxwCaptcha[data-state='bypass'] {
   border-color: var(--nxc-success);
 }
 
-.nxwCaptcha[data-theme="dark"] {
+.nxwCaptcha[data-theme='dark'] {
   --nxc-fg: #f3f4f6;
   --nxc-bg: #111827;
   --nxc-border: #374151;
@@ -69,7 +71,7 @@
   transition: opacity 200ms ease;
 }
 
-.nxwRow[data-busy="true"] {
+.nxwRow[data-busy='true'] {
   opacity: 0.7;
   cursor: wait;
 }
@@ -97,7 +99,9 @@
   background: var(--nxc-bg);
   padding: 0;
   margin: 0;
-  transition: transform 100ms ease, border-color 100ms ease;
+  transition:
+    transform 100ms ease,
+    border-color 100ms ease;
 }
 
 .nxwCheckbox:active:not(:disabled) {
@@ -109,13 +113,13 @@
   outline-offset: 2px;
 }
 
-.nxwCheckbox[data-checked="true"] {
+.nxwCheckbox[data-checked='true'] {
   border-color: var(--nxc-success);
   background: var(--nxc-success);
 }
 
-.nxwCheckbox[data-checked="true"]::after {
-  content: "";
+.nxwCheckbox[data-checked='true']::after {
+  content: '';
   width: 12px;
   height: 6px;
   border-left: 2px solid white;
@@ -123,7 +127,7 @@
   transform: rotate(-45deg) translateY(-1px);
 }
 
-.nxwCheckbox[data-busy="true"] {
+.nxwCheckbox[data-busy='true'] {
   cursor: wait;
   border-color: var(--nxc-accent);
 }
@@ -145,10 +149,18 @@
   gap: 6px;
 }
 
-.nxwStatus[data-tone="warning"] { color: var(--nxc-warning); }
-.nxwStatus[data-tone="success"] { color: var(--nxc-success); }
-.nxwStatus[data-tone="bypass"] { color: var(--nxc-success); }
-.nxwStatus[data-tone="error"] { color: var(--nxc-error); }
+.nxwStatus[data-tone='warning'] {
+  color: var(--nxc-warning);
+}
+.nxwStatus[data-tone='success'] {
+  color: var(--nxc-success);
+}
+.nxwStatus[data-tone='bypass'] {
+  color: var(--nxc-success);
+}
+.nxwStatus[data-tone='error'] {
+  color: var(--nxc-error);
+}
 
 .nxwFooter {
   display: flex;
@@ -158,7 +170,7 @@
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.nxwCaptcha[data-theme="dark"] .nxwFooter {
+.nxwCaptcha[data-theme='dark'] .nxwFooter {
   background: rgba(255, 255, 255, 0.03);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -197,10 +209,12 @@
 }
 
 @keyframes nxwSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.nxwCaptcha[data-reduced-motion="true"] .nxwSpinner {
+.nxwCaptcha[data-reduced-motion='true'] .nxwSpinner {
   animation: none;
   border-top-color: currentColor;
   opacity: 0.5;
@@ -236,3 +250,43 @@
   text-decoration: underline;
 }
 
+.nxwButtonRetry:focus-visible {
+  outline: 2px solid var(--nxc-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.nxwMathOptions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.nxwMathButton {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nxc-fg);
+  background: var(--nxc-bg);
+  border: 1px solid var(--nxc-border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 100ms ease;
+  min-width: 40px;
+}
+
+.nxwMathButton:hover {
+  border-color: var(--nxc-accent);
+  color: var(--nxc-accent);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.nxwMathButton:active {
+  transform: scale(0.95);
+}
+
+.nxwMathButton:focus-visible {
+  outline: 2px solid var(--nxc-accent);
+  outline-offset: 2px;
+}

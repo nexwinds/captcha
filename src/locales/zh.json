@@ -9,5 +9,7 @@
   "expired": "验证已过期,请重新验证。",
   "rate_limited": "尝试次数过多,请稍候再试。",
   "fail_open": "已跳过验证(服务不可用)。",
-  "privacy": "隐私"
+  "privacy": "隐私",
+  "math_question": "{{q}} 是多少？",
+  "math_pick": "请选择一个"
 }

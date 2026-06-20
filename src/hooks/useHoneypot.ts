@@ -4,11 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  emptyHoneypotState,
-  reduceHoneypot,
-  type HoneypotState,
-} from '../lib/honeypot.js'
+import { emptyHoneypotState, reduceHoneypot, type HoneypotState } from '../lib/honeypot.js'
 
 export interface UseHoneypotResult {
   state: HoneypotState

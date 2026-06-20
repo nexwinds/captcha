@@ -15,6 +15,7 @@ import de from '../locales/de.json' with { type: 'json' }
 import ja from '../locales/ja.json' with { type: 'json' }
 import zh from '../locales/zh.json' with { type: 'json' }
 import ar from '../locales/ar.json' with { type: 'json' }
+import nl from '../locales/nl.json' with { type: 'json' }
 
 export type TranslationKey =
   | 'label'
@@ -28,6 +29,8 @@ export type TranslationKey =
   | 'rate_limited'
   | 'fail_open'
   | 'privacy'
+  | 'math_question'
+  | 'math_pick'
 
 export type Translations = Record<TranslationKey, string>
 
@@ -40,10 +43,19 @@ const TABLES: Record<Locale, Translations> = {
   ja: ja as Translations,
   zh: zh as Translations,
   ar: ar as Translations,
+  nl: nl as Translations,
 }
 
 export const SUPPORTED_LOCALES: readonly Locale[] = [
-  'en', 'pt', 'es', 'fr', 'de', 'ja', 'zh', 'ar',
+  'en',
+  'pt',
+  'es',
+  'fr',
+  'de',
+  'ja',
+  'zh',
+  'ar',
+  'nl',
 ] as const
 
 export function resolveLocale(input?: string | null): Locale {
@@ -55,8 +67,18 @@ export function resolveLocale(input?: string | null): Locale {
   return 'en'
 }
 
-export function translate(locale: Locale, key: TranslationKey): string {
-  return TABLES[locale]?.[key] ?? TABLES.en[key] ?? key
+export function translate(
+  locale: Locale,
+  key: TranslationKey,
+  params?: Record<string, string>,
+): string {
+  let text = TABLES[locale]?.[key] ?? TABLES.en[key] ?? key
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      text = text.replace(`{{${k}}}`, v)
+    }
+  }
+  return text
 }
 
 export function detectBrowserLocale(): Locale {

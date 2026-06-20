@@ -71,7 +71,13 @@ describe('signals v1', () => {
   })
 
   it('toV1 clamps negative values to 0', () => {
-    const v1 = toV1({ dwellMs: -5, timeToClickMs: -1, mouseMovements: -2, keyboardInteractions: -3, isBot: false })
+    const v1 = toV1({
+      dwellMs: -5,
+      timeToClickMs: -1,
+      mouseMovements: -2,
+      keyboardInteractions: -3,
+      isBot: false,
+    })
     expect(v1.dwellMs).toBe(0)
     expect(v1.timeToClickMs).toBe(0)
     expect(v1.mouseMovements).toBe(0)

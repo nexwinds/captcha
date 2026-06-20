@@ -30,7 +30,10 @@ export function emptyHoneypotState(): HoneypotState {
   }
 }
 
-export function reduceHoneypot(prev: HoneypotState, partial: Partial<HoneypotState['flags']>): HoneypotState {
+export function reduceHoneypot(
+  prev: HoneypotState,
+  partial: Partial<HoneypotState['flags']>,
+): HoneypotState {
   const flags = { ...prev.flags, ...partial }
   return {
     flags,
@@ -43,12 +46,10 @@ export function reduceHoneypot(prev: HoneypotState, partial: Partial<HoneypotSta
  * component wires these into the rendered DOM.
  */
 export const honeypotHandlers = {
-  onFieldInput: (state: HoneypotState) =>
-    reduceHoneypot(state, { fieldFilled: true }),
+  onFieldInput: (state: HoneypotState) => reduceHoneypot(state, { fieldFilled: true }),
   onLinkClick: (state: HoneypotState) => (_e: { preventDefault: () => void }) => {
     _e.preventDefault()
     return reduceHoneypot(state, { linkClicked: true })
   },
-  onCheckboxChange: (state: HoneypotState) =>
-    reduceHoneypot(state, { checkboxChecked: true }),
+  onCheckboxChange: (state: HoneypotState) => reduceHoneypot(state, { checkboxChecked: true }),
 }

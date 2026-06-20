@@ -75,10 +75,9 @@ tags:
   - name: discovery
     description: Public discovery and calibration endpoints.
 
-security: []   # per-operation security defined below
+security: [] # per-operation security defined below
 
 paths:
-
   /calibration:
     get:
       tags: [discovery]
@@ -119,7 +118,7 @@ paths:
             schema: { $ref: '#/components/schemas/ChallengeIssueRequest' }
             examples:
               minimal:
-                value: { fingerprintHash: "fp_8f4356616b4a2e5d7a8b9c0d1e2f3a4b" }
+                value: { fingerprintHash: 'fp_8f4356616b4a2e5d7a8b9c0d1e2f3a4b' }
       responses:
         '200':
           description: Challenge issued.
@@ -138,10 +137,10 @@ paths:
               examples:
                 disabled:
                   value:
-                    type: "https://nexcookie.com/probs/site-not-found"
-                    title: "Site Not Found"
+                    type: 'https://nexcookie.com/probs/site-not-found'
+                    title: 'Site Not Found'
                     status: 404
-                    detail: "Captcha is disabled for this domain"
+                    detail: 'Captcha is disabled for this domain'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -203,16 +202,16 @@ paths:
               examples:
                 invalidPow:
                   value:
-                    type: "https://nexcookie.com/probs/invalid-pow"
-                    title: "Invalid Proof of Work"
+                    type: 'https://nexcookie.com/probs/invalid-pow'
+                    title: 'Invalid Proof of Work'
                     status: 403
-                    detail: "PoW hash does not meet required difficulty"
+                    detail: 'PoW hash does not meet required difficulty'
                 insufficientDifficulty:
                   value:
-                    type: "https://nexcookie.com/probs/insufficient-difficulty"
-                    title: "Insufficient Difficulty"
+                    type: 'https://nexcookie.com/probs/insufficient-difficulty'
+                    title: 'Insufficient Difficulty'
                     status: 403
-                    detail: "Required 20 bits, got 18"
+                    detail: 'Required 20 bits, got 18'
         '429':
           description: Rate limit exceeded. No `Retry-After` header is sent.
           content:
@@ -221,10 +220,10 @@ paths:
               examples:
                 rateLimited:
                   value:
-                    type: "https://nexcookie.com/probs/rate-limited"
-                    title: "Too Many Requests"
+                    type: 'https://nexcookie.com/probs/rate-limited'
+                    title: 'Too Many Requests'
                     status: 429
-                    detail: "10 requests per 20 minutes per ip:fingerprintHash bucket"
+                    detail: '10 requests per 20 minutes per ip:fingerprintHash bucket'
         '500':
           description: |
             Hard internal error (returned as 5xx — the widget should also
@@ -252,7 +251,7 @@ paths:
             schema: { $ref: '#/components/schemas/TokenVerifyRequest' }
             examples:
               minimal:
-                value: { token: "abcd1234.ef567890" }
+                value: { token: 'abcd1234.ef567890' }
       responses:
         '200':
           description: Token valid.
@@ -268,10 +267,10 @@ paths:
               examples:
                 invalidToken:
                   value:
-                    type: "https://nexcookie.com/probs/invalid-token"
-                    title: "Invalid Token"
+                    type: 'https://nexcookie.com/probs/invalid-token'
+                    title: 'Invalid Token'
                     status: 400
-                    detail: "Token signature does not verify"
+                    detail: 'Token signature does not verify'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '410':
@@ -283,16 +282,16 @@ paths:
               examples:
                 expired:
                   value:
-                    type: "https://nexcookie.com/probs/token-expired"
-                    title: "Token Expired"
+                    type: 'https://nexcookie.com/probs/token-expired'
+                    title: 'Token Expired'
                     status: 410
-                    detail: "Token expired at 2026-06-19T12:00:00Z"
+                    detail: 'Token expired at 2026-06-19T12:00:00Z'
                 revoked:
                   value:
-                    type: "https://nexcookie.com/probs/token-revoked"
-                    title: "Token Revoked"
+                    type: 'https://nexcookie.com/probs/token-revoked'
+                    title: 'Token Revoked'
                     status: 410
-                    detail: "Domain revoked all tokens at 2026-06-19T12:00:00Z"
+                    detail: 'Domain revoked all tokens at 2026-06-19T12:00:00Z'
 
   /.well-known/nexcaptcha.json:
     get:
@@ -314,11 +313,10 @@ paths:
                   value:
                     service: nexcaptcha
                     version: 1.0.0
-                    endpoint: "https://nexcookie.com/api/v1"
-                    fingerprint: "sha256:8f4356616b4a2e5d7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f"
+                    endpoint: 'https://nexcookie.com/api/v1'
+                    fingerprint: 'sha256:8f4356616b4a2e5d7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f'
 
 components:
-
   securitySchemes:
     SiteKey:
       type: http
@@ -350,10 +348,10 @@ components:
           examples:
             missing:
               value:
-                type: "https://nexcookie.com/probs/unauthorized"
-                title: "Unauthorized"
+                type: 'https://nexcookie.com/probs/unauthorized'
+                title: 'Unauthorized'
                 status: 401
-                detail: "Missing or invalid site key"
+                detail: 'Missing or invalid site key'
     InternalError:
       description: Internal server error. The widget should also treat this as fail-open.
       content:
@@ -361,16 +359,15 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
 
   schemas:
-
     Calibration:
       type: object
       additionalProperties: false
       required: [v, low, medium, high, critical]
       properties:
-        v:        { type: integer, const: 1, examples: [1] }
-        low:      { type: integer, minimum: 0, maximum: 64, examples: [16] }
-        medium:   { type: integer, minimum: 0, maximum: 64, examples: [18] }
-        high:     { type: integer, minimum: 0, maximum: 64, examples: [20] }
+        v: { type: integer, const: 1, examples: [1] }
+        low: { type: integer, minimum: 0, maximum: 64, examples: [16] }
+        medium: { type: integer, minimum: 0, maximum: 64, examples: [18] }
+        high: { type: integer, minimum: 0, maximum: 64, examples: [20] }
         critical: { type: integer, minimum: 0, maximum: 64, examples: [23] }
 
     ChallengeIssueRequest:
@@ -385,20 +382,20 @@ components:
           description: |
             Widget-computed fingerprint hash. v1 is opaque to the server;
             no rotation logic is performed server-side.
-          examples: ["fp_8f4356616b4a2e5d7a8b9c0d1e2f3a4b"]
+          examples: ['fp_8f4356616b4a2e5d7a8b9c0d1e2f3a4b']
 
     ChallengeIssueResponse:
       type: object
       additionalProperties: false
       required: [challengeId, nonce, issuedAt, expiresAt, bits, origin]
       properties:
-        challengeId: { type: string, examples: ["9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"] }
+        challengeId: { type: string, examples: ['9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'] }
         nonce:
           type: string
           minLength: 64
           maxLength: 64
           description: 64-character hex string (32 bytes).
-        issuedAt:  { type: string, format: date-time }
+        issuedAt: { type: string, format: date-time }
         expiresAt: { type: string, format: date-time }
         bits:
           type: integer
@@ -445,8 +442,8 @@ components:
       additionalProperties: false
       required: [challengeId, nonce, hash, bits, signals, fingerprintHash]
       properties:
-        challengeId:  { type: string }
-        nonce:        { type: string, minLength: 64, maxLength: 64 }
+        challengeId: { type: string }
+        nonce: { type: string, minLength: 64, maxLength: 64 }
         hash:
           type: string
           minLength: 8
@@ -456,8 +453,8 @@ components:
             found by brute force. The server validates by computing
             `sha256( concat(utf8("<challengeId>:<nonce>"), hexDecode(hash)) )`
             and asserting at least `bits` leading-zero bits.
-        bits:         { type: integer, minimum: 0, maximum: 64 }
-        signals:      { $ref: '#/components/schemas/SignalsV1' }
+        bits: { type: integer, minimum: 0, maximum: 64 }
+        signals: { $ref: '#/components/schemas/SignalsV1' }
         fingerprintHash:
           type: string
           minLength: 1
@@ -478,7 +475,7 @@ components:
             `{id, siteId, ip, fph, kind:"verify", iat, exp}`.
             `iat` is used server-side for `iat < revokedAt` bulk-revocation
             checks.
-          examples: ["eyJpZCI6ImFhYWFhLi4uIn0.xN5pJ5yG8p2X3vKz0eR5z5p2O5w1bF4u6Vv8mYxQ7zA"]
+          examples: ['eyJpZCI6ImFhYWFhLi4uIn0.xN5pJ5yG8p2X3vKz0eR5z5p2O5w1bF4u6Vv8mYxQ7zA']
         expiresAt: { type: string, format: date-time }
         failOpen:
           type: boolean
@@ -561,7 +558,7 @@ components:
           additionalProperties: false
           required: [ip, fingerprintHash]
           properties:
-            ip: { type: string, examples: ["203.0.113.42"] }
+            ip: { type: string, examples: ['203.0.113.42'] }
             fingerprintHash: { type: string }
         bypass:
           type: boolean
@@ -572,12 +569,12 @@ components:
       additionalProperties: false
       required: [service, version, endpoint, fingerprint]
       properties:
-        service:     { type: string, const: nexcaptcha }
-        version:     { type: string, examples: ["1.0.0"] }
-        endpoint:    { type: string, format: uri }
+        service: { type: string, const: nexcaptcha }
+        version: { type: string, examples: ['1.0.0'] }
+        endpoint: { type: string, format: uri }
         fingerprint:
           type: string
-          pattern: "^sha256:[0-9a-f]{64}$"
+          pattern: '^sha256:[0-9a-f]{64}$'
           description: |
             Public service fingerprint. Widgets can pin against this in
             strict mode to detect SaaS rotation.
@@ -588,10 +585,10 @@ components:
       additionalProperties: true
       required: [type, title, status]
       properties:
-        type:     { type: string, format: uri }
-        title:    { type: string }
-        status:   { type: integer, minimum: 100, maximum: 599 }
-        detail:   { type: string }
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer, minimum: 100, maximum: 599 }
+        detail: { type: string }
         instance: { type: string }
 
 # ----------------------------------------------------------------------------
@@ -604,7 +601,7 @@ x-nexcaptcha-internal:
   revision-history:
     - revision: 1
       date: 2026-06-19
-      summary: "Initial spec (557 lines). Source of truth: CLARIFY_NEXCOOKIE.md."
+      summary: 'Initial spec (557 lines). Source of truth: CLARIFY_NEXCOOKIE.md.'
     - revision: 2
       date: 2026-06-19
       summary: |
@@ -636,10 +633,10 @@ x-nexcaptcha-internal:
     - "PoW input format is exactly: payload = '<challengeId>:<nonce>', combined = concat(utf8(payload), hexDecode(clientHash)), digest = sha256(combined)."
     - "Verify token payload: {id, siteId, ip, fph, kind:'verify', iat, exp}. iat and exp are integer Unix seconds."
     - "Bypass token payload: {id, siteId, ip, fph, kind:'bypass', iat, exp}. iat and exp are integer Unix seconds. There is no `v`, no `sub`, no `nwCompanyId`."
-    - "Bulk revocation rule: server rejects when `payload.iat < revokedAt` (strict less-than). Tokens with iat == revokedAt are honored. Redis key: nxw:cap:revocation:<domainId> stores the revocation timestamp."
-    - "Token TTLs: success = 300s, bypass = 86400s. nwCompanyId is server-only and never appears on the wire."
-    - "Rate limit: only POST /api/v1/challenge/verify is counted. Bucket key is `${ip}:${fingerprintHash}`. Default 10 hits / 20 min."
+    - 'Bulk revocation rule: server rejects when `payload.iat < revokedAt` (strict less-than). Tokens with iat == revokedAt are honored. Redis key: nxw:cap:revocation:<domainId> stores the revocation timestamp.'
+    - 'Token TTLs: success = 300s, bypass = 86400s. nwCompanyId is server-only and never appears on the wire.'
+    - 'Rate limit: only POST /api/v1/challenge/verify is counted. Bucket key is `${ip}:${fingerprintHash}`. Default 10 hits / 20 min.'
     - "Fail-open envelope in current implementation: truly minimal `{status:'success', failOpen:true}` — no token, no expiresAt. The spec models both as optional to leave room for the future enhancement."
-    - "Challenge replay: 120s TTL, deleted on successful verify (verify/route.ts#L133)."
+    - 'Challenge replay: 120s TTL, deleted on successful verify (verify/route.ts#L133).'
     - "There are no widget-side server tests; widget's test suite is the only line of defense."
     - "Fail-open discriminator: the 3-way oneOf splits on `status` + `failOpen` together. `status:'success'` AND `failOpen:false` → Success. `status:'bypass'` AND `failOpen:false` → Bypass. `status:'success'` AND `failOpen:true` → FailOpen."

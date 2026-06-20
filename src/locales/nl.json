@@ -1,0 +1,15 @@
+{
+  "label": "Ik ben menselijk",
+  "verifying": "Verifiëren…",
+  "success": "Geverifieerd",
+  "bypass": "Geverifieerd (bypass)",
+  "warning": "Verificatie duurt iets langer dan normaal…",
+  "error": "Verificatie mislukt. Probeer het opnieuw.",
+  "retry": "Opnieuw proberen",
+  "expired": "Verificatie verlopen. Verifieer opnieuw.",
+  "rate_limited": "Te veel pogingen. Wacht even en probeer het opnieuw.",
+  "fail_open": "Verificatie omzeild (service niet beschikbaar).",
+  "privacy": "Privacy",
+  "math_question": "Wat is {{q}}?",
+  "math_pick": "Kies er een"
+}

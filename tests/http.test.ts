@@ -70,11 +70,7 @@ describe('http.issueChallenge', () => {
         origin: 'nexcaptcha',
       }),
     )
-    const r = await issueChallenge(
-      ENDPOINT,
-      { fingerprintHash: 'fp_x' },
-      { siteKey: 'pk_live_x' },
-    )
+    const r = await issueChallenge(ENDPOINT, { fingerprintHash: 'fp_x' }, { siteKey: 'pk_live_x' })
     expect(r.challengeId).toBe('ch-1')
     expect(r.bits).toBe(18)
     const call = fetchMock.mock.calls[0]!
@@ -140,9 +136,7 @@ describe('http.verifyChallenge', () => {
   })
 
   it('parses failOpen (truly minimal envelope)', async () => {
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({ status: 'success', failOpen: true }),
-    )
+    fetchMock.mockResolvedValueOnce(jsonResponse({ status: 'success', failOpen: true }))
     const out = await verifyChallenge(
       ENDPOINT,
       {
@@ -163,7 +157,12 @@ describe('http.verifyChallenge', () => {
 
   it('throws on 429 with problem type', async () => {
     fetchMock.mockResolvedValueOnce(
-      problemResponse(429, 'https://nexcookie.com/probs/rate-limited', 'Too Many Requests', '10 per 20m'),
+      problemResponse(
+        429,
+        'https://nexcookie.com/probs/rate-limited',
+        'Too Many Requests',
+        '10 per 20m',
+      ),
     )
     await expect(
       verifyChallenge(
@@ -173,7 +172,13 @@ describe('http.verifyChallenge', () => {
           nonce: 'a'.repeat(64),
           hash: '00000001',
           bits: 18,
-          signals: { v: 1, dwellMs: 0, timeToClickMs: 0, mouseMovements: 0, keyboardInteractions: 0 },
+          signals: {
+            v: 1,
+            dwellMs: 0,
+            timeToClickMs: 0,
+            mouseMovements: 0,
+            keyboardInteractions: 0,
+          },
           fingerprintHash: 'fp',
         },
         { siteKey: 'pk' },
@@ -211,10 +216,13 @@ describe('error handling', () => {
 
   it('returns CaptchaTimeoutError when fetch hangs', async () => {
     fetchMock.mockImplementationOnce(
-      () => new Promise(() => {/* never resolves */}),
+      () =>
+        new Promise(() => {
+          /* never resolves */
+        }),
     )
-    await expect(
-      getCalibration(ENDPOINT, { timeoutMs: 10 }),
-    ).rejects.toBeInstanceOf(CaptchaTimeoutError)
+    await expect(getCalibration(ENDPOINT, { timeoutMs: 10 })).rejects.toBeInstanceOf(
+      CaptchaTimeoutError,
+    )
   }, 1000)
 })

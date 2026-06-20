@@ -172,7 +172,7 @@ export type VerifyOutcome =
   | VerifyOutcomeBlocked
   | VerifyOutcomeError
 
-export type Locale = 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar'
+export type Locale = 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar' | 'nl'
 
 export interface CaptchaContextValue {
   siteKey: string

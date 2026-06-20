@@ -34,23 +34,7 @@ Since the widget talks directly to the SaaS, you MUST add your domain to the "Al
 
 Failure to do so will result in **CORS errors**.
 
-### 2. The Provider
-
-Wrap your app with the provider and provide your `siteKey`.
-
-```tsx
-import { CaptchaProvider } from '@nexwinds/captcha'
-
-export default function Layout({ children }) {
-  return (
-    <CaptchaProvider siteKey={process.env.NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY!}>
-      {children}
-    </CaptchaProvider>
-  )
-}
-```
-
-### 3. Usage
+### 2. Usage
 
 ```tsx
 'use client'
@@ -63,15 +47,43 @@ export default function Form() {
 
   return (
     <form action="/api/submit" method="POST">
-      <Captcha siteKey={process.env.NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY!} onSuccess={(token) => setToken(token)} />
+      <Captcha
+        siteKey={process.env.NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY!}
+        onSuccess={(token) => setToken(token)}
+      />
       <input type="hidden" name="captcha_token" value={token ?? ''} />
-      <button type="submit" disabled={!token}>Send</button>
+      <button type="submit" disabled={!token}>
+        Send
+      </button>
     </form>
   )
 }
 ```
 
-### 4. Server-side Verification
+---
+
+## Optional: Global Configuration
+
+If you have multiple forms and want to share a `siteKey`, `locale`, or `theme` globally, you can use the `CaptchaProvider`.
+
+```tsx
+// app/layout.tsx
+import { CaptchaProvider } from '@nexwinds/captcha'
+
+export default function Layout({ children }) {
+  return (
+    <CaptchaProvider siteKey={process.env.NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY!}>
+      {children}
+    </CaptchaProvider>
+  )
+}
+```
+
+When using the provider, you can omit those props on individual `<Captcha />` components.
+
+---
+
+### 3. Server-side Verification
 
 ```ts
 // app/api/submit/route.ts
@@ -84,6 +96,8 @@ const nxc = createServerClient({
 
 export async function POST(req: Request) {
   const { token } = await req.json()
+
+  // Extract user IP (Next.js 15+ example)
   const ip = (await headers()).get('x-forwarded-for') ?? undefined
 
   const result = await nxc.verifyToken(token, { ip })
@@ -97,12 +111,26 @@ export async function POST(req: Request) {
 
 ## Environment variables
 
-| Variable                           | Scope        | Required | Notes                                         |
-|------------------------------------|--------------|----------|-----------------------------------------------|
-| `NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY`  | client       | yes      | `pk_live_<hex>` from the dashboard.           |
-| `NEXCAPTCHA_SECRET_KEY`            | server only  | yes      | `sk_live_<hex>`. Used by `createServerClient`. |
+| Variable                          | Scope       | Required | Notes                                          |
+| --------------------------------- | ----------- | -------- | ---------------------------------------------- |
+| `NEXT_PUBLIC_NEXCAPTCHA_SITE_KEY` | client      | yes      | `pk_live_<hex>` from the dashboard.            |
+| `NEXCAPTCHA_SECRET_KEY`           | server only | yes      | `sk_live_<hex>`. Used by `createServerClient`. |
 
-The `NEXT_PUBLIC_` prefix is a Next.js convention that inlines a variable into client bundles. The secret key must **not** have that prefix so it remains secure on the server.
+---
+
+## CSP Requirements
+
+If your application uses a **Content Security Policy (CSP)**, you must allow the following origins:
+
+```http
+Content-Security-Policy:
+  connect-src 'self' https://nexcookie.com;
+  style-src 'self' 'unsafe-inline';
+```
+
+- `connect-src`: The widget talks to `https://nexcookie.com/api/v1` to issue and verify challenges.
+- `style-src 'unsafe-inline'`: Required for the inline spinner transform and dynamic theme colors.
+- **Note**: The widget does _not_ use iframes or external scripts.
 
 ---
 
@@ -110,21 +138,27 @@ The `NEXT_PUBLIC_` prefix is a Next.js convention that inlines a variable into c
 
 ### Props
 
-| Prop        | Type                                      | Description                                                                 |
-|-------------|-------------------------------------------|-----------------------------------------------------------------------------|
-| `siteKey`   | `string`                                  | **Required**. Your public site key from the dashboard.                      |
-| `locale`    | `'en' \| 'pt' \| 'es' \| 'fr' \| 'de' \| 'ja' \| 'zh' \| 'ar'` | UI language. If omitted, detects automatically via `navigator.language`. |
-| `theme`     | `'auto' \| 'light' \| 'dark'`             | Visual theme. `'auto'` follows the user's system dark mode preference.      |
-| `onSuccess` | `(token: string) => void`                 | Called when the captcha is successfully solved.                             |
-| `onError`   | `(err: { message: string }) => void`      | Called on network or unexpected errors.                                     |
+| Prop        | Type                                                                   | Description                                                            |
+| ----------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `siteKey`   | `string`                                                               | **Required**. Your public site key from the dashboard.                 |
+| `locale`    | `'en' \| 'pt' \| 'es' \| 'fr' \| 'de' \| 'ja' \| 'zh' \| 'ar' \| 'nl'` | UI language. If omitted, detects automatically. Fallback is `'en'`.    |
+| `theme`     | `'auto' \| 'light' \| 'dark'`                                          | Visual theme. `'auto'` follows the user's system dark mode preference. |
+| `onSuccess` | `(token: string) => void`                                              | Called when the captcha is successfully solved.                        |
+| `onError`   | `(err: { message: string }) => void`                                   | Called on network or unexpected errors.                                |
 
-### Locale (Auto Detection)
+### Locale & Types
 
-By default, the widget automatically detects the user's language using `navigator.language`. If the detected language is not supported, it falls back to English (`en`). You can force a specific language by passing the `locale` prop.
+The `Locale` type is exported from the main package for use in your TypeScript projects:
 
-### Theme (Auto Mode)
+```ts
+import type { Locale } from '@nexwinds/captcha'
 
-The `theme` prop defaults to `'auto'`, which automatically switches between light and dark modes based on the user's system settings (`prefers-color-scheme`). You can also force `'light'` or `'dark'` mode.
+const myLocale: Locale = 'pt'
+```
+
+Supported locales: `'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'ar' | 'nl'`.
+
+By default, the widget automatically detects the user's language using `navigator.language`. If an unsupported locale is provided (e.g., via props), it gracefully falls back to English (`en`).
 
 ---
 

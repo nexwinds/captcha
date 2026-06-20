@@ -38,10 +38,7 @@ describe('server.createServerClient', () => {
       expect(r.siteId).toBe(1)
       expect(r.bypass).toBe(false)
     }
-    expect(fetchMock).toHaveBeenCalledWith(
-      `${ENDPOINT}/token/verify`,
-      expect.anything()
-    )
+    expect(fetchMock).toHaveBeenCalledWith(`${ENDPOINT}/token/verify`, expect.anything())
   })
 
   it('respects the custom endpoint option', async () => {
@@ -60,16 +57,20 @@ describe('server.createServerClient', () => {
       fetch: fetchMock as unknown as typeof fetch,
     })
     await client.verifyToken('tk')
-    expect(fetchMock).toHaveBeenCalledWith(
-      `${CUSTOM_ENDPOINT}/token/verify`,
-      expect.anything()
-    )
+    expect(fetchMock).toHaveBeenCalledWith(`${CUSTOM_ENDPOINT}/token/verify`, expect.anything())
   })
 
   it('maps 410 token-expired to reason:expired', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      problemResponse(410, 'https://nexcookie.com/probs/token-expired', 'Token Expired', 'expired'),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        problemResponse(
+          410,
+          'https://nexcookie.com/probs/token-expired',
+          'Token Expired',
+          'expired',
+        ),
+      )
     const client = createServerClient({
       secretKey: 'sk_live_x',
       fetch: fetchMock as unknown as typeof fetch,
@@ -82,9 +83,16 @@ describe('server.createServerClient', () => {
   })
 
   it('maps 410 token-revoked to reason:revoked', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      problemResponse(410, 'https://nexcookie.com/probs/token-revoked', 'Token Revoked', 'revoked'),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        problemResponse(
+          410,
+          'https://nexcookie.com/probs/token-revoked',
+          'Token Revoked',
+          'revoked',
+        ),
+      )
     const client = createServerClient({
       secretKey: 'sk_live_x',
       fetch: fetchMock as unknown as typeof fetch,
@@ -97,9 +105,11 @@ describe('server.createServerClient', () => {
   })
 
   it('maps 400 invalid-token to reason:invalid', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      problemResponse(400, 'https://nexcookie.com/probs/invalid-token', 'Invalid Token', 'bad'),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        problemResponse(400, 'https://nexcookie.com/probs/invalid-token', 'Invalid Token', 'bad'),
+      )
     const client = createServerClient({
       secretKey: 'sk_live_x',
       fetch: fetchMock as unknown as typeof fetch,
@@ -112,9 +122,11 @@ describe('server.createServerClient', () => {
   })
 
   it('maps 401 to reason:unauthorized', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      problemResponse(401, 'https://nexcookie.com/probs/unauthorized', 'Unauthorized', 'no key'),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        problemResponse(401, 'https://nexcookie.com/probs/unauthorized', 'Unauthorized', 'no key'),
+      )
     const client = createServerClient({
       secretKey: 'sk_live_x',
       fetch: fetchMock as unknown as typeof fetch,
@@ -151,9 +163,11 @@ describe('server.createServerClient', () => {
   })
 
   it('problem is attached to the failure result', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      problemResponse(410, 'https://nexcookie.com/probs/token-expired', 'Token Expired', 'foo'),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        problemResponse(410, 'https://nexcookie.com/probs/token-expired', 'Token Expired', 'foo'),
+      )
     const client = createServerClient({
       secretKey: 'sk_live_x',
       fetch: fetchMock as unknown as typeof fetch,

@@ -9,5 +9,7 @@
   "expired": "Vérification expirée. Veuillez vérifier à nouveau.",
   "rate_limited": "Trop de tentatives. Veuillez patienter un instant et réessayer.",
   "fail_open": "Vérification ignorée (service indisponible).",
-  "privacy": "Confidentialité"
+  "privacy": "Confidentialité",
+  "math_question": "Combien font {{q}} ?",
+  "math_pick": "Choisissez-en un"
 }

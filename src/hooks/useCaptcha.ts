@@ -23,16 +23,13 @@ import {
   HTTP_TIMEOUT_MS,
   MAX_POW_BITS,
 } from '../lib/constants.js'
-import type {
-  Calibration,
-  ChallengeIssueResponse,
-  VerifyOutcome,
-} from '../types.js'
+import type { Calibration, ChallengeIssueResponse, VerifyOutcome } from '../types.js'
 
 export type CaptchaState =
   | 'idle'
   | 'issuing'
   | 'solving'
+  | 'fallback'
   | 'verifying'
   | 'success'
   | 'bypass'
@@ -52,6 +49,12 @@ export interface UseCaptchaOptions {
   signal?: AbortSignal
 }
 
+export interface MathChallenge {
+  question: string
+  options: number[]
+  answer: number
+}
+
 export interface UseCaptchaResult {
   state: CaptchaState
   start: () => Promise<void>
@@ -59,6 +62,10 @@ export interface UseCaptchaResult {
   calibration: Calibration | null
   /** Most recent HTTP error, if any. Cleared on `reset()`. */
   lastError: string | null
+  /** Current math challenge, if in fallback state. */
+  mathChallenge: MathChallenge | null
+  /** Submit math answer. */
+  submitMath: (answer: number) => void
 }
 
 let calibrationCache: { value: Calibration; fetchedAt: number } | null = null
@@ -74,11 +81,31 @@ async function fetchCalibration(): Promise<Calibration> {
   return cal
 }
 
+const FALLBACK_TIMEOUT_MS = 15_000
+
+function generateMath(): MathChallenge {
+  const a = Math.floor(Math.random() * 10) + 1
+  const b = Math.floor(Math.random() * 10) + 1
+  const answer = a + b
+  const options = [answer]
+  while (options.length < 4) {
+    const wrong = Math.floor(Math.random() * 20) + 1
+    if (!options.includes(wrong)) options.push(wrong)
+  }
+  return {
+    question: `${a} + ${b}`,
+    answer,
+    options: options.sort(() => Math.random() - 0.5),
+  }
+}
+
 export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
   const [state, setState] = useState<CaptchaState>('idle')
   const [calibration, setCalibration] = useState<Calibration | null>(null)
   const [lastError, setLastError] = useState<string | null>(null)
+  const [mathChallenge, setMathChallenge] = useState<MathChallenge | null>(null)
   const inflightRef = useRef<AbortController | null>(null)
+  const challengeRef = useRef<ChallengeIssueResponse | null>(null)
   const onVerifyRef = useRef(opts.onVerify)
   const onSuccessRef = useRef(opts.onSuccess)
   const onExpireRef = useRef(opts.onExpire)
@@ -108,7 +135,13 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
   }, [calibration])
 
   const start = useCallback(async () => {
-    if (state !== 'idle' && state !== 'blocked' && state !== 'error' && state !== 'success' && state !== 'bypass') {
+    if (
+      state !== 'idle' &&
+      state !== 'blocked' &&
+      state !== 'error' &&
+      state !== 'success' &&
+      state !== 'bypass'
+    ) {
       return
     }
     inflightRef.current?.abort()
@@ -126,21 +159,40 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
       )
       if (!challenge) throw new Error('issueChallenge returned null')
       const ch = challenge
+      challengeRef.current = ch
       setState('solving')
 
+      // Fallback timer
+      const timeout = setTimeout(() => {
+        if (inflightRef.current === ac) {
+          ac.abort()
+          setMathChallenge(generateMath())
+          setState('fallback')
+        }
+      }, FALLBACK_TIMEOUT_MS)
+
       const bits = Math.min(ch.bits, MAX_POW_BITS)
-      const solved = await solve({
-        challengeId: ch.challengeId,
-        nonce: ch.nonce,
-        bits,
-        signal: ac.signal,
-      })
+      let solved: { hash: string } | null = null
+      try {
+        solved = await solve({
+          challengeId: ch.challengeId,
+          nonce: ch.nonce,
+          bits,
+          signal: ac.signal,
+        })
+      } finally {
+        clearTimeout(timeout)
+      }
+
+      if (!solved) return // aborted/fallback triggered
 
       setState('verifying')
       // FINAL VERIFICATION: ensure hash is 8 chars before sending
       const finalHash = String(solved.hash)
       if (finalHash.length !== 8) {
-        throw new Error(`useCaptcha: solver returned hash of length ${finalHash.length}, expected 8`)
+        throw new Error(
+          `useCaptcha: solver returned hash of length ${finalHash.length}, expected 8`,
+        )
       }
 
       const outcome = await verifyChallenge(
@@ -187,19 +239,63 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
         onVerifyRef.current?.({ status: 'error', reason: 'unknown', message: msg })
       }
     }
-  }, [
-    state,
-    opts.siteKey,
-    opts.fingerprintHash,
-    opts.getSignals,
-    calibration,
-  ])
+  }, [state, opts.siteKey, opts.fingerprintHash, opts.getSignals, calibration])
 
   const reset = useCallback(() => {
     inflightRef.current?.abort()
     setState('idle')
     setLastError(null)
+    setMathChallenge(null)
+    challengeRef.current = null
   }, [])
+
+  const submitMath = useCallback(
+    async (answer: number) => {
+      if (state !== 'fallback' || !mathChallenge || !challengeRef.current) return
+
+      if (answer !== mathChallenge.answer) {
+        setMathChallenge(generateMath())
+        return
+      }
+
+      // Correct answer! Simulate a bypass or verify.
+      // For Local Generation, we verify via signals.
+      setState('verifying')
+      const ch = challengeRef.current
+      try {
+        const outcome = await verifyChallenge(
+          DEFAULT_ENDPOINT,
+          {
+            challengeId: ch.challengeId,
+            nonce: ch.nonce,
+            hash: '00000000', // Placeholder for math bypass
+            bits: 0, // Math bypass effectively bits=0
+            signals: opts.getSignals(),
+            fingerprintHash: opts.fingerprintHash,
+          },
+          {
+            siteKey: opts.siteKey,
+            timeoutMs: HTTP_TIMEOUT_MS,
+          },
+        )
+
+        const ui: VerifyOutcome = mapOutcome(outcome)
+        if (ui.status === 'success' || ui.status === 'bypass') {
+          setState(ui.status)
+          onSuccessRef.current?.(ui.token)
+        } else {
+          setState('blocked')
+        }
+        onVerifyRef.current?.(ui)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setLastError(msg)
+        setState('error')
+        onErrorRef.current?.({ message: msg })
+      }
+    },
+    [state, mathChallenge, opts],
+  )
 
   useEffect(() => {
     return () => {
@@ -208,14 +304,12 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
   }, [])
 
   return useMemo(
-    () => ({ state, start, reset, calibration, lastError }),
-    [state, start, reset, calibration, lastError],
+    () => ({ state, start, reset, calibration, lastError, mathChallenge, submitMath }),
+    [state, start, reset, calibration, lastError, mathChallenge, submitMath],
   )
 }
 
-function mapOutcome(
-  outcome: import('../types.js').ChallengeVerifyOutcome,
-): VerifyOutcome {
+function mapOutcome(outcome: import('../types.js').ChallengeVerifyOutcome): VerifyOutcome {
   if (outcome.status === 'bypass') {
     return {
       status: 'bypass',
@@ -228,9 +322,7 @@ function mapOutcome(
     return {
       status: 'success',
       token: outcome.token ?? '',
-      expiresAt: outcome.expiresAt
-        ? Date.parse(outcome.expiresAt)
-        : Date.now() + 5 * 60 * 1000,
+      expiresAt: outcome.expiresAt ? Date.parse(outcome.expiresAt) : Date.now() + 5 * 60 * 1000,
       via: 'failOpen',
     }
   }

@@ -1,13 +1,16 @@
+'use client'
+
 /**
- * CaptchaProvider: optional React context for sharing publishable key,
+ * CaptchaProvider: optional React context for sharing siteKey,
  * locale, and theme across multiple captcha instances.
  */
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import type { CaptchaContextValue, Locale } from '../types.js'
+import { type ReactNode, createContext, useContext, useMemo, useEffect } from 'react'
+import type { Locale, CaptchaContextValue } from '../types.js'
 import { DEFAULT_ENDPOINT } from '../lib/constants.js'
+import { getFingerprintHash } from '../lib/fingerprint.js'
 
-const CaptchaContext = createContext<CaptchaContextValue | null>(null)
+export const CaptchaContext = createContext<CaptchaContextValue | null>(null)
 
 export interface CaptchaProviderProps {
   /** siteKey from the captcha dashboard. */
@@ -18,6 +21,12 @@ export interface CaptchaProviderProps {
 }
 
 export function CaptchaProvider(props: CaptchaProviderProps) {
+  useEffect(() => {
+    // Pre-warm the fingerprint cache so it's ready by the time
+    // the user clicks the checkbox.
+    getFingerprintHash().catch(() => {})
+  }, [])
+
   const value = useMemo<CaptchaContextValue>(
     () => ({
       siteKey: props.siteKey,

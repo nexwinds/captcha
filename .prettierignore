@@ -1,0 +1,6 @@
+dist
+node_ignore
+node_modules
+package-lock.json
+storybook-static
+*.tgz

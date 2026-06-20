@@ -32,11 +32,7 @@ import {
   type FetchOptions,
 } from '../lib/http.js'
 import { HTTP_TIMEOUT_MS } from '../lib/constants.js'
-import type {
-  CreateServerClientOptions,
-  VerifyTokenOptions,
-  VerifyTokenResult,
-} from '../types.js'
+import type { CreateServerClientOptions, VerifyTokenOptions, VerifyTokenResult } from '../types.js'
 
 /** The SaaS source of truth. */
 const NEXCAPTCHA_SAAS_URL = 'https://nexcookie.com/api/v1'

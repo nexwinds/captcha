@@ -9,5 +9,7 @@
   "expired": "Überprüfung abgelaufen. Bitte erneut verifizieren.",
   "rate_limited": "Zu viele Versuche. Bitte einen Moment warten und erneut versuchen.",
   "fail_open": "Überprüfung übersprungen (Dienst nicht verfügbar).",
-  "privacy": "Datenschutz"
+  "privacy": "Datenschutz",
+  "math_question": "Was ist {{q}}?",
+  "math_pick": "Wähle eines"
 }

@@ -9,5 +9,7 @@
   "expired": "Verification expired. Please verify again.",
   "rate_limited": "Too many attempts. Please wait a moment and try again.",
   "fail_open": "Verification bypassed (service unavailable).",
-  "privacy": "Privacy"
+  "privacy": "Privacy",
+  "math_question": "What is {{q}}?",
+  "math_pick": "Pick one"
 }

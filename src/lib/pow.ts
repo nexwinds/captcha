@@ -24,7 +24,7 @@ export interface SolveOptions {
   bits: number
   /** Aborts the solve loop. */
   signal?: AbortSignal
-  /** Iterations per idle callback. Defaults to 256. */
+  /** Iterations per idle callback. Defaults to 1024. */
   chunkSize?: number
 }
 
@@ -37,7 +37,7 @@ export interface SolveResult {
   elapsedMs: number
 }
 
-const CHUNK = 256
+const DEFAULT_CHUNK_SIZE = 1024
 const MAX_COUNTER = 0xffffffff
 
 const HEX_CHARS = '0123456789abcdef'
@@ -119,7 +119,7 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
   const prefix = `${challengeId}:${nonce}`
   const prefixBytes = utf8(prefix)
 
-  const chunkSize = opts.chunkSize ?? CHUNK
+  const chunkSize = opts.chunkSize ?? DEFAULT_CHUNK_SIZE
   const start = performance.now()
   let counter = 0
 
@@ -143,7 +143,9 @@ export async function solve(opts: SolveOptions): Promise<SolveResult> {
       if (hasLeadingZeroBits(digest, bits)) {
         const solutionHex = bytesToHexSafe(solutionBytes)
         if (solutionHex.length !== 8) {
-          throw new Error(`solve: internal error: solutionHex length is ${solutionHex.length}, expected 8`)
+          throw new Error(
+            `solve: internal error: solutionHex length is ${solutionHex.length}, expected 8`,
+          )
         }
         return {
           hash: solutionHex,

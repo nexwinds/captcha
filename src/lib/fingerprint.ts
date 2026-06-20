@@ -12,8 +12,8 @@
  * over.
  */
 
-const STORAGE_KEY = 'nxw:cap:fp'
-const SALT_KEY = 'nxw:cap:fp:salt'
+const STORAGE_KEY = 'nxc:cap:fp'
+const SALT_KEY = 'nxc:cap:fp:salt'
 
 const HEX_CHARS = '0123456789abcdef'
 
