@@ -97,6 +97,7 @@ describe('http.verifyChallenge', () => {
         nonce: 'n',
         hash: 'h',
         bits: 18,
+        method: 'pow',
         signals: {
           v: 1,
           dwellMs: 1,
@@ -109,6 +110,10 @@ describe('http.verifyChallenge', () => {
       { siteKey: 'pk_live_x' },
     )
     expect(out.status).toBe('success')
+    const call = fetchMock.mock.calls[0]!
+    expect(call[0]).toBe(`${ENDPOINT}/challenge/verify`)
+    const body = JSON.parse(call[1]!.body as string)
+    expect(body.method).toBe('pow')
   })
 
   it('parses bypass', async () => {

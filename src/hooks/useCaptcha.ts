@@ -22,6 +22,7 @@ import {
   FALLBACK_CALIBRATION,
   HTTP_TIMEOUT_MS,
   MAX_POW_BITS,
+  FAIL_OPEN_LOCAL_TTL_MS,
 } from '../lib/constants.js'
 import type { Calibration, ChallengeIssueResponse, VerifyOutcome } from '../types.js'
 
@@ -45,6 +46,8 @@ export interface UseCaptchaOptions {
   onSuccess?: (token: string) => void
   onExpire?: () => void
   onError?: (err: { message: string }) => void
+  /** If true, the widget will bypass verification if the SaaS is unreachable. */
+  failOpen?: boolean
   /** Abort the in-flight solve/verify (component unmount). */
   signal?: AbortSignal
 }
@@ -202,6 +205,7 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
           nonce: ch.nonce,
           hash: finalHash,
           bits: ch.bits, // Send original bits, not the capped ones
+          method: 'pow',
           signals: opts.getSignals(),
           fingerprintHash: opts.fingerprintHash,
         },
@@ -218,6 +222,20 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
       onVerifyRef.current?.(ui)
     } catch (e) {
       if (ac.signal.aborted) return
+
+      if (opts.failOpen && (e instanceof CaptchaTimeoutError || e instanceof CaptchaNetworkError)) {
+        const ui: VerifyOutcome = {
+          status: 'success',
+          token: 'fail-open-token',
+          expiresAt: Date.now() + FAIL_OPEN_LOCAL_TTL_MS,
+          via: 'failOpen',
+        }
+        setState('success')
+        onSuccessRef.current?.(ui.token)
+        onVerifyRef.current?.(ui)
+        return
+      }
+
       const msg = e instanceof Error ? e.message : String(e)
       setLastError(msg)
       setState('error')
@@ -268,8 +286,9 @@ export function useCaptcha(opts: UseCaptchaOptions): UseCaptchaResult {
           {
             challengeId: ch.challengeId,
             nonce: ch.nonce,
-            hash: '00000000', // Placeholder for math bypass
-            bits: 0, // Math bypass effectively bits=0
+            hash: '00000000',
+            bits: ch.bits, // Send original bits requirement
+            method: 'math', // Signal math fallback
             signals: opts.getSignals(),
             fingerprintHash: opts.fingerprintHash,
           },

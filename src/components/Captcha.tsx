@@ -55,6 +55,7 @@ export function Captcha(props: CaptchaProps) {
     onSuccess: useCallback((t: string) => onSuccessRef.current?.(t), []),
     onExpire: useCallback(() => onExpireRef.current?.(), []),
     onError: useCallback((e: { message: string }) => onErrorRef.current?.(e), []),
+    failOpen: props.failOpen ?? ctx?.failOpen,
   })
 
   const id = useId()

@@ -454,6 +454,11 @@ components:
             `sha256( concat(utf8("<challengeId>:<nonce>"), hexDecode(hash)) )`
             and asserting at least `bits` leading-zero bits.
         bits: { type: integer, minimum: 0, maximum: 64 }
+        method:
+          type: string
+          enum: [pow, math]
+          default: pow
+          description: Verification method used by the widget.
         signals: { $ref: '#/components/schemas/SignalsV1' }
         fingerprintHash:
           type: string

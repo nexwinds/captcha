@@ -17,6 +17,7 @@ export interface CaptchaProviderProps {
   siteKey: string
   locale?: Locale
   theme?: 'auto' | 'light' | 'dark'
+  failOpen?: boolean
   children: ReactNode
 }
 
@@ -32,8 +33,9 @@ export function CaptchaProvider(props: CaptchaProviderProps) {
       siteKey: props.siteKey,
       locale: (props.locale ?? 'en') as Locale,
       theme: props.theme ?? 'auto',
+      failOpen: props.failOpen,
     }),
-    [props.siteKey, props.locale, props.theme],
+    [props.siteKey, props.locale, props.theme, props.failOpen],
   )
   return <CaptchaContext.Provider value={value}>{props.children}</CaptchaContext.Provider>
 }

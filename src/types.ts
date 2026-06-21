@@ -59,6 +59,8 @@ export interface ChallengeVerifyRequest {
   /** 8-character hex (4-byte Big-Endian counter) the widget found. */
   hash: string
   bits: number
+  /** Verification method. Defaults to 'pow'. */
+  method?: 'pow' | 'math'
   signals: SignalsV1
   fingerprintHash: string
 }
@@ -178,6 +180,7 @@ export interface CaptchaContextValue {
   siteKey: string
   locale: Locale
   theme: 'auto' | 'light' | 'dark'
+  failOpen?: boolean
 }
 
 export interface CaptchaProps {
@@ -187,6 +190,8 @@ export interface CaptchaProps {
   locale?: Locale
   /** "auto" follows the user's prefers-color-scheme. */
   theme?: 'auto' | 'light' | 'dark'
+  /** If true, the widget will bypass verification if the SaaS is unreachable. */
+  failOpen?: boolean
   /** Fired when the captcha is successfully solved. */
   onSuccess?: (token: string) => void
   /** Fired when the challenge expires. */
